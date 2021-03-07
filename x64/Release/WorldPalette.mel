@@ -1,0 +1,20 @@
+global proc WorldPaletteCmd()
+{
+  WorldPalette -n "NAME";
+}
+
+global string $gMainWindow;
+setParent $gMainWindow;
+
+// adds a new drop down menu
+menu -l "World Palette"
+-p MayaWindow
+-to 1
+-aob true
+NewDropDownMenu;
+
+// add a item to the drop down menu
+menuItem -l "Run Cmd"
+-echoCommand true
+-c WorldPaletteCmd
+NewDropDownMenuItem1;
