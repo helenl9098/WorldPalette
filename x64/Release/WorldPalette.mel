@@ -168,6 +168,9 @@ global proc ShowGUI()
 global string $gMainWindow;
 setParent $gMainWindow;
 
+// Set Y as up axis
+setUpAxis "y";
+
 // GUI items
 global string $noSelect;
 global string $planarSelect;
