@@ -18,7 +18,6 @@ global proc makePlanarSelectRegion()
     global string $selectionLayer;
     // Create a 2-D selection bound from a plane
     $selectionRegion = `polyPlane -name "selectionRegion"`;
-    rotate -r 90deg 0 0;
     scale -r 2 2 2;
     // Assign selection material to plane
     hyperShade -assign $selectionMat;
@@ -36,7 +35,6 @@ global proc makeRadialSelectRegion()
     global string $selectionLayer;
     // Create a 2-D selection bound from a disc
     $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
-    rotate -r 90deg 0 0;
     // Assign selection material to disc
     hyperShade -assign $selectionMat;
     $selectionType = 2;
@@ -66,8 +64,8 @@ global proc moveAlongAxis(float $val, int $axis)
             // Add onto current X position
             move -x ($val + (getAttr ($selectionRegion[0] + ".translateX")));
         } else if ($axis == 1) {
-            // Add onto current Y position
-            move -y ($val + (getAttr ($selectionRegion[0] + ".translateY")));
+            // Add onto current Z position
+            move -z ($val + (getAttr ($selectionRegion[0] + ".translateZ")));
         }
         select -cl  ; // deselect
     }
@@ -146,10 +144,10 @@ global proc ShowGUI()
                 setParent ..;
                 frameLayout -label "Move Selection";
                     columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
-                        button -l "Move Left" -c "moveAlongAxis(1.0, 0)";
-                        button -l "Move Right" -c "moveAlongAxis(-1.0, 0)";
-                        button -l "Move Up" -c "moveAlongAxis(1.0, 1)";
-                        button -l "Move Down" -c "moveAlongAxis(-1.0, 1)";
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)";
+                        button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)";
+                        button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
                 setParent ..;
                 frameLayout -label "Resize Selection";
                     columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
