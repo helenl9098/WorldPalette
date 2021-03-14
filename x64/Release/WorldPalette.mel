@@ -15,6 +15,7 @@ global proc makePlanarSelectRegion()
     global string $selectionMat;
     global string $selectionRegion[];
     global int $selectionType;
+    global string $selectionLayer;
     // Create a 2-D selection bound from a plane
     $selectionRegion = `polyPlane -name "selectionRegion"`;
     rotate -r 90deg 0 0;
@@ -22,6 +23,9 @@ global proc makePlanarSelectRegion()
     // Assign selection material to plane
     hyperShade -assign $selectionMat;
     $selectionType = 1;
+    // Add the plane to selectionLayer
+    layerEditorAddObjects $selectionLayer;
+    select -cl  ; // deselect
 }
 
 global proc makeRadialSelectRegion()
@@ -29,12 +33,16 @@ global proc makeRadialSelectRegion()
     global string $selectionMat;
     global string $selectionRegion[];
     global int $selectionType;
+    global string $selectionLayer;
     // Create a 2-D selection bound from a disc
     $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
     rotate -r 90deg 0 0;
     // Assign selection material to disc
     hyperShade -assign $selectionMat;
     $selectionType = 2;
+    // Add the disc to selectionLayer
+    layerEditorAddObjects $selectionLayer;
+    select -cl  ; // deselect
 }
 
 global proc focusOnCurrentSelection()
@@ -44,6 +52,57 @@ global proc focusOnCurrentSelection()
     if ($selectionType) {
         select -r $selectionRegion[0];
         viewFit -f 0.;
+        select -cl  ; // deselect
+    }
+}
+
+global proc moveAlongAxis(float $val, int $axis)
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            // Add onto current X position
+            move -x ($val + (getAttr ($selectionRegion[0] + ".translateX")));
+        } else if ($axis == 1) {
+            // Add onto current Y position
+            move -y ($val + (getAttr ($selectionRegion[0] + ".translateY")));
+        }
+        select -cl  ; // deselect
+    }
+}
+
+global proc scaleRegion(float $val, int $axis)
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType == 1) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            float $width = `polyPlane -q -w $selectionRegion`;
+            if ($width + $val > 0) {
+                // increase/decrease width
+                setAttr ($selectionRegion[1] + ".width") ($width + $val);
+            }
+        } else if ($axis == 1) {
+            float $height = `polyPlane -q -h $selectionRegion`;
+            if ($height + $val > 0) {
+                // increase/decrease height
+                setAttr ($selectionRegion[1] + ".height") ($height + $val);
+            }
+        }
+        select -cl  ; // deselect
+    } else if ($selectionType == 2) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            float $rad = `polyCylinder -q -r $selectionRegion[0]`;
+            if ($rad + $val > 0) {
+                // increase/decrease radius
+                setAttr ($selectionRegion[1] + ".radius") ($rad + $val);
+            }
+        }
+        select -cl  ; // deselect
     }
 }
 
@@ -84,12 +143,26 @@ global proc ShowGUI()
                         $noSelect = `radioButton -l "No Selection" -select -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
-                    setParent ..;
-                 frameLayout -label "Options";
-                     columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
-                     button -l "Focus On Selection Region" -c focusOnCurrentSelection;
-                     button -l "Save Selection to Palette" -c saveSelection;
-                 setParent ..;
+                setParent ..;
+                frameLayout -label "Move Selection";
+                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
+                        button -l "Move Left" -c "moveAlongAxis(1.0, 0)";
+                        button -l "Move Right" -c "moveAlongAxis(-1.0, 0)";
+                        button -l "Move Up" -c "moveAlongAxis(1.0, 1)";
+                        button -l "Move Down" -c "moveAlongAxis(-1.0, 1)";
+                setParent ..;
+                frameLayout -label "Resize Selection";
+                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
+                        button -l "Increase Width" -c "scaleRegion(0.5, 0)";
+                        button -l "Decrease Width" -c "scaleRegion(-0.5, 0)";
+                        button -l "Increase Height" -c "scaleRegion(0.5, 1)";
+                        button -l "Decrease Height" -c "scaleRegion(-0.5, 1)";
+                setParent ..;
+                frameLayout -label "Other Options";
+                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
+                        button -l "Focus On Selection Region" -c focusOnCurrentSelection;
+                        button -l "Save Selection to Palette" -c saveSelection;
+                setParent ..;
             setParent ..;
     showWindow;
 }
@@ -97,7 +170,7 @@ global proc ShowGUI()
 global string $gMainWindow;
 setParent $gMainWindow;
 
-// Radio Buttons
+// GUI items
 global string $noSelect;
 global string $planarSelect;
 global string $radialSelect;
@@ -109,6 +182,11 @@ global string $selectionMat;
 global int $selectionExists = false;
 global string $selectionRegion[];
 global int $selectionType = 0;
+
+// Create the selection display layer
+global string $selectionLayer;
+$selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
+setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
 
 // adds a new drop down menu
 menu -l "World Palette"
