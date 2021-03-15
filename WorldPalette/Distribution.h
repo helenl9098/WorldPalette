@@ -2,6 +2,7 @@
 
 #include "vec.h"
 #include <vector>
+#include "helper.h"
 
 enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
 enum class CATEGORY { ROCK, TREE, HOUSE }; // can add more later
@@ -52,11 +53,13 @@ private:
 class Distribution
 {
 public: 
+	bool empty; // is this an empty distribution? aka if the user selected nothing
 	SelectedRegion selectedRegion;
 
 	// TO DO: Add more about histograms here
 
-public: 
+public:
+	Distribution(); // default constructor that makes an empty distribution
 	Distribution(SelectedRegion r);
 	Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos); // makes a selected region for you
 	~Distribution();

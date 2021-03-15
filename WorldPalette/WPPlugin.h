@@ -6,7 +6,10 @@
 #include <maya/MGlobal.h>
 #include <maya/MPxCommand.h>
 #include "Distribution.h"
+#include "WorldPalette.h"
 #include "helper.h"
+
+WorldPalette worldPalette;
 
 // custom Maya command
 class WPPlugin : public MPxCommand

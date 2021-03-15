@@ -24,6 +24,7 @@
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
 // Maya Plugin creator function
+
 void* WPPlugin::creator()
 {
 	return new WPPlugin;
@@ -135,7 +136,6 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 MStatus WPPlugin::doIt(const MArgList& argList)
 {
 	MStatus status;
-	MGlobal::displayInfo("Hello World");
 
 	// parse files
 	MString name("");
@@ -154,9 +154,11 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	printVec3(MString("Max Argument: "), maxBound);
 	printVec3(MString("Center Argument: "), center);
 
-	// Plugin's functionality. Just a dialog box for now. 
-	MString caption("Hello Maya");
-	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + "World Pos:" + center[0] + ", " + center[1] + ", " + center[2] + "\" -button \"Ok\" -defaultButton \"Ok\"");
+	// Plugin's functionality
+	worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+
+	MString caption("Processed Selection!");
+	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + caption + "\" -button \"Ok\" -defaultButton \"Ok\"");
 	MGlobal::executeCommand(messageBoxCommand);
 	return status;
 }

@@ -3,8 +3,9 @@
 SelectedRegion::SelectedRegion(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos)
 	: selectionType(st), position(pos), width(w), height(h), minBounds(min), maxBounds(max), radius(w)
 {
-	// TO DO: Make sure the user never has a selection type of NONE
-	findSceneObjects();
+	if (st != SelectionType::NONE) {
+		findSceneObjects();
+	}
 }
 
 float SelectedRegion::getArea() {
@@ -19,17 +20,30 @@ float SelectedRegion::getArea() {
 * Goes through all the scene objects and finds the ones that are currently in the selected region
 */
 void SelectedRegion::findSceneObjects() {
-
+	printString(MString("Finding Scene Objects.."), MString(""));
 }
 
 SelectedRegion::~SelectedRegion() {}
 
-Distribution::Distribution(SelectedRegion r) 
-	: selectedRegion(r)
+// default constructor that makes an empty distribution
+Distribution::Distribution() 
+	: selectedRegion(SelectedRegion(SelectionType::NONE, 0, 0, vec3(0, 0, 0), vec3(0, 0 , 0), vec3(0, 0, 0))), empty(true)
 {}
 
+Distribution::Distribution(SelectedRegion r) 
+	: selectedRegion(r), empty(false)
+{
+	if (r.selectionType == SelectionType::NONE) {
+		empty = true;
+	}
+}
+
 Distribution::Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos)
-	: selectedRegion(SelectedRegion(st, w, h, min, max, pos))
-{}
+	: selectedRegion(SelectedRegion(st, w, h, min, max, pos)), empty(false)
+{
+	if (st == SelectionType::NONE) {
+		empty = true;
+	}
+}
 
 Distribution::~Distribution() {}
