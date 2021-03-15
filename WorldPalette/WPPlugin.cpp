@@ -14,6 +14,8 @@
 #define kSelectionWidthFlagLong "-width"
 #define kSelectionHeightFlag "-h"
 #define kSelectionHeightFlagLong "-height"
+#define kSelectionWorldPositionFlag "-wp"
+#define kSelectionWorldPositionFlagLong "-worldpos"
 #define kSelectionMinBoundFlag "-mib"
 #define kSelectionMinBoundFlagLong "-minBound"
 #define kSelectionMaxBoundFlag "-mab"
@@ -34,6 +36,7 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionTypeFlag, kSelectionTypeFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSelectionWidthFlag, kSelectionWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSelectionHeightFlag, kSelectionHeightFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kSelectionWorldPositionFlag, kSelectionWorldPositionFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMinBoundFlag, kSelectionMinBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMaxBoundFlag, kSelectionMaxBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	return syntax;
@@ -44,6 +47,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	                          WPPlugin::SelectionType& type,
 	                          double& width,
 	                          double& height,
+							  double3& center,
 	                          double3& minBound,
 	                          double3& maxBound)
 {
@@ -88,6 +92,18 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	{
 		stat = parser.getFlagArgument(kSelectionHeightFlagLong, 0, height);
 	}
+	if (parser.isFlagSet(kSelectionWorldPositionFlag))
+	{
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 0, center[0]);
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 1, center[1]);
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 2, center[2]);
+	}
+	if (parser.isFlagSet(kSelectionWorldPositionFlagLong))
+	{
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlagLong, 0, center[0]);
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlagLong, 1, center[1]);
+		stat = parser.getFlagArgument(kSelectionWorldPositionFlagLong, 2, center[2]);
+	}
 	if (parser.isFlagSet(kSelectionMinBoundFlag))
 	{
 		stat = parser.getFlagArgument(kSelectionMinBoundFlag, 0, minBound[0]);
@@ -126,13 +142,14 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	WPPlugin::SelectionType seltype;
 	double width;
 	double height;
+	double3 center;
 	double3 minBound;
 	double3 maxBound;
-	parseSyntax(argList, name, seltype, width, height, minBound, maxBound);
+	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound);
 
 	// Plugin's functionality. Just a dialog box for now. 
 	MString caption("Hello Maya");
-	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + width + "\" -button \"Ok\" -defaultButton \"Ok\"");
+	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + "World Pos:" + center[0] + ", " + center[1] + ", " + center[2] + "\" -button \"Ok\" -defaultButton \"Ok\"");
 	MGlobal::executeCommand(messageBoxCommand);
 	return status;
 }

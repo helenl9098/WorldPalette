@@ -16,15 +16,17 @@ global proc makePlanarSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
-    // Create a 2-D selection bound from a plane
-    $selectionRegion = `polyPlane -name "selectionRegion"`;
-    scale -r 2 2 2;
-    // Assign selection material to plane
-    hyperShade -assign $selectionMat;
-    $selectionType = 1;
-    // Add the plane to selectionLayer
-    layerEditorAddObjects $selectionLayer;
-    select -cl  ; // deselect
+    if ($selectionType != 1) {
+        // Create a 2-D selection bound from a plane
+        $selectionRegion = `polyPlane -name "selectionRegion"`;
+        scale -r 2 2 2;
+        // Assign selection material to plane
+        hyperShade -assign $selectionMat;
+        $selectionType = 1;
+        // Add the plane to selectionLayer
+        layerEditorAddObjects $selectionLayer;
+        select -cl  ; // deselect
+    }
 }
 
 global proc makeRadialSelectRegion()
@@ -33,14 +35,16 @@ global proc makeRadialSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
-    // Create a 2-D selection bound from a disc
-    $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
-    // Assign selection material to disc
-    hyperShade -assign $selectionMat;
-    $selectionType = 2;
-    // Add the disc to selectionLayer
-    layerEditorAddObjects $selectionLayer;
-    select -cl  ; // deselect
+    if ($selectionType != 2) {
+        // Create a 2-D selection bound from a disc
+        $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
+        // Assign selection material to disc
+        hyperShade -assign $selectionMat;
+        $selectionType = 2;
+        // Add the disc to selectionLayer
+        layerEditorAddObjects $selectionLayer;
+        select -cl  ; // deselect
+    }
 }
 
 global proc focusOnCurrentSelection()
@@ -112,17 +116,20 @@ global proc saveSelection()
         float $width = 0;
         float $height = 0;
         float $boundBox[];
+        float $worldPos[];
         if ($selectionType == 1) {
             // PLANAR
             $width = `polyPlane -q -w $selectionRegion`;
             $height = `polyPlane -q -h $selectionRegion`;
             $boundBox = `exactWorldBoundingBox $selectionRegion`;
-            WorldPalette -st 1 -w $width -h $height -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
         } else if ($selectionType == 2) {
             // RADIAL
             $width = `polyCylinder -q -r $selectionRegion[0]`;
             $boundBox = `exactWorldBoundingBox selectionRegion`;
-            WorldPalette -st 2 -w $width -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
         }
     }
 }
@@ -132,13 +139,15 @@ global proc ShowGUI()
     global string $noSelect;
     global string $planarSelect;
     global string $radialSelect;
+    global int $selectionType;
+    // Create the GUI window
     window -title "WorldPalette GUI";
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
                     columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
-                        radioCollection;
-                        $noSelect = `radioButton -l "No Selection" -select -onc deleteCurrentSelectRegion`;
+                        string $modeCollection = `radioCollection`;
+                        $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
                 setParent ..;
@@ -162,7 +171,17 @@ global proc ShowGUI()
                         button -l "Save Selection to Palette" -c saveSelection;
                 setParent ..;
             setParent ..;
-    showWindow;
+    // Find which radio button must be set active
+    if ($selectionType) {
+        if ($selectionType == 1) {
+            radioCollection -edit -select $planarSelect $modeCollection; 
+        } else if ($selectionType == 2) {
+            radioCollection -edit -select $radialSelect $modeCollection; 
+        }
+    } else {
+        radioCollection -edit -select $noSelect $modeCollection; 
+    }
+    showWindow;    
 }
 
 global string $gMainWindow;

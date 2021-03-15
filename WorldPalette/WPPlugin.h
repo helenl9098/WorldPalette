@@ -24,7 +24,8 @@ public:
 		                MString& name, 
 		                WPPlugin::SelectionType& type, 
 		                double& width, 
-		                double& height, 
+		                double& height,
+					    double3& center,
 		                double3& minBound, 
 		                double3& maxBound);
 
