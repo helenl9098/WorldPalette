@@ -44,12 +44,12 @@ MSyntax WPPlugin::newSyntax()
 
 MStatus WPPlugin::parseSyntax(const MArgList& argList, 
 	                          MString& name, 
-	                          WPPlugin::SelectionType& type,
+	                          SelectionType& type,
 	                          double& width,
 	                          double& height,
-							  double3& center,
-	                          double3& minBound,
-	                          double3& maxBound)
+							  vec3& center,
+	                          vec3& minBound,
+	                          vec3& maxBound)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -68,13 +68,13 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	{
 		int temp;
 		stat = parser.getFlagArgument(kSelectionTypeFlag, 0, temp);
-		type = (WPPlugin::SelectionType) temp;
+		type = (SelectionType) temp;
 	}
 	if (parser.isFlagSet(kSelectionTypeFlagLong))
 	{
 		int temp;
 		stat = parser.getFlagArgument(kSelectionTypeFlagLong, 0, temp);
-		type = (WPPlugin::SelectionType) temp;
+		type = (SelectionType) temp;
 	}
 	if (parser.isFlagSet(kSelectionWidthFlag))
 	{
@@ -139,13 +139,20 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// parse files
 	MString name("");
-	WPPlugin::SelectionType seltype;
-	double width;
-	double height;
-	double3 center;
-	double3 minBound;
-	double3 maxBound;
+	SelectionType seltype;
+	double width; // only in one direction, so the true width is twice as long
+	double height; // only in one direction, so the true height is twice as long
+	vec3 center;
+	vec3 minBound;
+	vec3 maxBound;
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound);
+
+	// checking arguments
+	printFloat(MString("Width Argument: "), width);
+	printFloat(MString("Height Argument: "), height);
+	printVec3(MString("Min Argument: "), minBound);
+	printVec3(MString("Max Argument: "), maxBound);
+	printVec3(MString("Center Argument: "), center);
 
 	// Plugin's functionality. Just a dialog box for now. 
 	MString caption("Hello Maya");

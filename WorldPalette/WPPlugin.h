@@ -5,15 +5,12 @@
 #include <maya/MObject.h>
 #include <maya/MGlobal.h>
 #include <maya/MPxCommand.h>
+#include "Distribution.h"
+#include "helper.h"
+
 // custom Maya command
 class WPPlugin : public MPxCommand
 {
-
-enum class SelectionType {
-	NONE,
-	PLANAR,
-	RADIAL,
-};
 
 public:
 	WPPlugin() {};
@@ -22,12 +19,11 @@ public:
 	static MSyntax newSyntax();
 	MStatus parseSyntax(const MArgList& argList, 
 		                MString& name, 
-		                WPPlugin::SelectionType& type, 
-		                double& width, 
-		                double& height,
-					    double3& center,
-		                double3& minBound, 
-		                double3& maxBound);
-
+		                SelectionType& type, 
+		                double& width,
+		                double& height, 
+						vec3& center,
+		                vec3& minBound, 
+		                vec3& maxBound);
 };
 #endif
