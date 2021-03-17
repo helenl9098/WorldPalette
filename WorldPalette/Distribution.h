@@ -3,6 +3,13 @@
 #include "vec.h"
 #include <vector>
 #include "helper.h"
+#include <maya/MSelectionList.h>
+#include <maya/MObjectArray.h>
+#include <maya/MFnSet.h>
+#include <maya/MFnTransform.h>
+#include <maya/MItDag.h>
+#include <maya/MDagPath.h>
+#include <maya/MVector.h>
 
 enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
 enum class CATEGORY { ROCK, TREE, HOUSE }; // can add more later
