@@ -56,7 +56,7 @@ void SelectedRegion::findSceneObjects() {
 	int numSets = sets->length();
 
     //
-        // Do a dag-iteration and for every mesh found, create facet and
+    // Do a dag-iteration and for every mesh found, create facet and
         // vertex look-up tables. These tables will keep track of which
         // sets each component belongs to.
         //
@@ -75,9 +75,6 @@ void SelectedRegion::findSceneObjects() {
             fprintf(stderr, "Failure in DAG iterator setup.\n");
             return;
         }
-
-        
-        MStringArray* objectNames = new MStringArray;
 
         for (; !dagIterator.isDone(); dagIterator.next())
         {
@@ -98,54 +95,60 @@ void SelectedRegion::findSceneObjects() {
                 {
                     // We want only the shape, 
                     // not the transform-extended-to-shape.
-                    MString name = dagPath.fullPathName();
-                    objectNames->append(name);
-
-                    printString("Mesh + Transform Option: ", name);
+                    MString name = dagPath.partialPathName();
+                    //printString("Mesh + Transform Option: ", name);
 
                     // 1. ignore the selection region
+                    bool objectInRegion = false;
+                    if (name == MString("selectionRegion")) {
+                        continue;
+                    }
 
                     // 2. for all geometry, find its transform/position
                     MFnTransform fnTransform(dagPath);
                     MVector trans = fnTransform.getTranslation(MSpace::kWorld, &stat);
-                    printVec3(MString("Translation Vector: "), vec3(trans[0], trans[1], trans[2]));
 
                     // 3. check if position is inside bounding box
+                    if (this->selectionType == SelectionType::PLANAR) {
+                        if (trans[0] > minBounds[0]  // if greater than min X
+                            && trans[0] < maxBounds[0] // if less than max X
+                            && trans[2] > minBounds[2] // if greater than min z
+                            && trans[2] < maxBounds[2]) { // if less than max z
+                            
+                            // the object is in the bounding box!
+                            objectInRegion = true;
+                        }
+                    }
+                    else if (this->selectionType == SelectionType::RADIAL) {
+                        if (Distance(vec3(trans[0], trans[1], trans[2]), this->position) < this->radius) {
+
+                            // the object is in the bounding box!
+                            objectInRegion = true;
+                        }
+                    }
+
+                    // TO DO: Figure out y height
 
                     // 4. if so, we create a scene object struct
+                    if (objectInRegion) {
+                        // 5. fill in scene object struct with type & position
+                        SceneObject obj{};
+                        obj.position = vec3(trans[0], trans[1], trans[2]);
 
-                    // 5. fill in scene object struct with type & position
+                        // TO DO: CHANGE DATA TYPES LATER
+                        obj.layer = LAYER::VEGETATION;
+                        obj.datatype = DATATYPE::DISTRIBUTION;
+                        obj.category = CATEGORY::HOUSE;
+                        obj.name = name;
 
-                    // 6. push scene object back in vector
+                        // 6. push scene object back in vector
+                        this->objects.push_back(obj);
+
+                        printString("Adding this to the objects vector: ", name);
+                        printVec3(MString("Located at: "), vec3(trans[0], trans[1], trans[2]));
+                    }
 
                     continue;
-                }
-                else if (dagPath.hasFn(MFn::kMesh))
-                {
-                    MString name = dagPath.fullPathName();
-                    objectNames->append(name);
-
-                    printString("Just Mesh Option: ", name);
-                    continue;
-
-                    /*
-                    // We have a mesh so create a vertex and polygon table
-                    // for this object.
-                    //
-
-                    MFnMesh fnMesh(dagPath);
-                    int vtxCount = fnMesh.numVertices();
-                    int polygonCount = fnMesh.numPolygons();
-                    // we do not need this call anymore, we have the shape.
-                    // dagPath.extendToShape();
-                    MString name = dagPath.fullPathName();
-                    objectNames->append(name);
-                    objectNodeNamesArray.append(fnMesh.name());
-
-                    vertexCounts.append(vtxCount);
-                    polygonCounts.append(polygonCount);
-
-                    objectCount++; */
                 }
             }
         }

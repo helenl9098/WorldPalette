@@ -10,6 +10,7 @@
 #include <maya/MItDag.h>
 #include <maya/MDagPath.h>
 #include <maya/MVector.h>
+#include <maya/MString.h>
 
 enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
 enum class CATEGORY { ROCK, TREE, HOUSE }; // can add more later
@@ -20,6 +21,7 @@ struct SceneObject {
 	CATEGORY category;
 	DATATYPE datatype; 
 	vec3 position; // this is the local position, as if the selected region is located at 0,0,0
+	MString name;
 };
 
 enum class SelectionType {

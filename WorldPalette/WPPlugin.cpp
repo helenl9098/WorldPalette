@@ -157,6 +157,9 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Plugin's functionality
 	worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 
+	// Check that scene objects are found
+	//printString(MString("The first object in the list is: "), worldPalette.currentlySelectedRegion.selectedRegion.objects[0].name);
+
 	MString caption("Processed Selection!");
 	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + caption + "\" -button \"Ok\" -defaultButton \"Ok\"");
 	MGlobal::executeCommand(messageBoxCommand);
