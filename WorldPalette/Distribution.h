@@ -13,7 +13,7 @@
 #include <maya/MString.h>
 
 enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
-enum class CATEGORY { ROCK, TREE, HOUSE }; // can add more later
+enum class CATEGORY { ROCK = 0, TREE = 1, HOUSE = 2 }; // can add more later
 enum class DATATYPE { DISTRIBUTION, GRAPH, EXTERNAL }; // this is all the possibilities!
 
 struct SceneObject {

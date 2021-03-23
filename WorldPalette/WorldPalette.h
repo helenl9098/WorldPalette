@@ -28,7 +28,10 @@ public:
 	// TO DO: Discuss what to do if user tries to save a distribution in a slot that already has a distribution
 	// TO DO: Discuss way of assigning distributions unique values, for debugging purposes
 	// TO DO: add future editing operations here
-	// TO DO: Add priority order
+
+	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
+
+	static std::vector<CATEGORY> priorityOrder; // priority order - items in the beginning are prioritized
 
 	~WorldPalette();
 };

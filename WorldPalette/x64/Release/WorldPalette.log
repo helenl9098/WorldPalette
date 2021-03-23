@@ -1,9 +1,1 @@
-﻿  Distribution.cpp
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(15,24): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
-     Creating library C:\Users\Helen\Desktop\WPPlugin\WorldPalette\x64\Release\WorldPalette.lib and object C:\Users\Helen\Desktop\WPPlugin\WorldPalette\x64\Release\WorldPalette.exp
-  Generating code
-  1 of 164 functions ( 0.6%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
-  Finished generating code
-  WorldPalette.vcxproj -> C:\Users\Helen\Desktop\WPPlugin\WorldPalette\x64\Release\WorldPalette.mll
+﻿  WPPlugin.cpp

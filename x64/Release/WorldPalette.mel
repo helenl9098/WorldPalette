@@ -1,3 +1,66 @@
+global proc reorderPriority()
+{
+    global string $scrollPriority;
+    global int $priorityOrder[]; // this keeps track of the updates
+    // Total number of items
+    int $numItems = `textScrollList -q -ni $scrollPriority`;
+    // Get selected item index
+    int $clickedItem[] = `textScrollList -q -sii $scrollPriority`;
+    // Get all items
+    string $allItems[] = `textScrollList -q -ai $scrollPriority`;
+    // If the first item is already the clicked item, do nothing
+    if ($allItems[0] == $allItems[$clickedItem[0] - 1]) {
+        return;
+    } else {
+        // Bring this item to the top
+        textScrollList -e -ap 1 ($allItems[$clickedItem[0] - 1] + "") $scrollPriority;
+        // Remove the item at the old position
+        textScrollList -e -rii ($clickedItem[0] + 1) $scrollPriority;
+        
+        // Update the priority order array
+        // Shift elements until you get to the moved item's index
+        int $replaced = $priorityOrder[0];
+        $priorityOrder[0] = $priorityOrder[$clickedItem[0] - 1];
+        for ($i = 1; $i < $clickedItem[0]; $i++) {
+            int $replaced2 = $priorityOrder[$i];
+            $priorityOrder[$i] = $replaced;
+            $replaced = $replaced2;
+        }
+        print "Testing:\n";
+        for ($i = 0; $i < 3; $i++) {
+            print $priorityOrder[$i];
+        }
+    }
+}
+
+global proc updatePriority()
+{
+    // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
+    global int $priorityOrder[];
+    // Send updated order to C++
+    WorldPalette -po $priorityOrder[0] $priorityOrder[1] $priorityOrder[2];
+}
+
+global proc fillPriority()
+{
+    // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
+    global string $scrollPriority;
+    global int $priorityOrder[];
+    for ($i = 0; $i < 3; $i++) {
+        switch($priorityOrder[$i]) {
+            case 0:
+                textScrollList -e -a "ROCK" $scrollPriority;
+                break;
+            case 1:
+                textScrollList -e -a "TREE" $scrollPriority;
+                break;
+            case 2:
+                textScrollList -e -a "HOUSE" $scrollPriority;
+                break;
+        }
+    }
+}
+
 global proc deleteCurrentSelectRegion()
 {
     global int $selectionType;
@@ -136,41 +199,53 @@ global proc saveSelection()
 
 global proc ShowGUI()
 {
+    // Get the necessary global variables
+    // Selection
     global string $noSelect;
     global string $planarSelect;
     global string $radialSelect;
     global int $selectionType;
+    // Priority Order
+    global string $scrollPriority;
     // Create the GUI window
-    window -title "WorldPalette GUI";
+    string $window = `window -title "WorldPalette GUI" -s 0`;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
-                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
+                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 100 -columnWidth 2 100 -columnWidth 3 100 -cs 2 5 -cs 3 5;
                         string $modeCollection = `radioCollection`;
                         $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
-                setParent ..;
+                        setParent ..;
+                    setParent ..;
                 frameLayout -label "Move Selection";
-                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
-                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)";
-                        button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
-                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)";
-                        button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
-                setParent ..;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
+                        setParent ..;
+                    setParent ..;
                 frameLayout -label "Resize Selection";
-                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
-                        button -l "Increase Width" -c "scaleRegion(0.5, 0)";
-                        button -l "Decrease Width" -c "scaleRegion(-0.5, 0)";
-                        button -l "Increase Height" -c "scaleRegion(0.5, 1)";
-                        button -l "Decrease Height" -c "scaleRegion(-0.5, 1)";
-                setParent ..;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Increase Width" -c "scaleRegion(0.5, 0)"; button -l "Decrease Width" -c "scaleRegion(-0.5, 0)";
+                        button -l "Increase Height" -c "scaleRegion(0.5, 1)"; button -l "Decrease Height" -c "scaleRegion(-0.5, 1)";
+                        setParent ..;
+                    setParent ..;
                 frameLayout -label "Other Options";
-                    columnLayout -columnAttach "both" 5 -rowSpacing 10 -columnWidth 300;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Focus On Selection Region" -c focusOnCurrentSelection;
                         button -l "Save Selection to Palette" -c saveSelection;
-                setParent ..;
-            setParent ..;
+                        setParent ..;
+                    setParent ..;
+            frameLayout -label "Distribution" -collapsable true;
+                frameLayout -label "Priority Order";
+                    columnLayout -columnAttach "both" 5 -rowSpacing 10;
+                        $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
+                        button -l "Update Priority" -c updatePriority;
+                    setParent ..;
+                frameLayout -label "Palette";
+                //setParent ..;
+          
     // Find which radio button must be set active
     if ($selectionType) {
         if ($selectionType == 1) {
@@ -181,6 +256,8 @@ global proc ShowGUI()
     } else {
         radioCollection -edit -select $noSelect $modeCollection; 
     }
+    // Append the items to priority order scroll in correct order
+    fillPriority;
     showWindow;    
 }
 
@@ -190,10 +267,14 @@ setParent $gMainWindow;
 // Set Y as up axis
 setUpAxis "y";
 
-// GUI items
+// GUI Items
 global string $noSelect;
 global string $planarSelect;
 global string $radialSelect;
+global string $scrollPriority;
+
+// Priority Order
+global int $priorityOrder[] = { 0, 1, 2 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
 
 // Selection Shader
 global string $selectionMat;
