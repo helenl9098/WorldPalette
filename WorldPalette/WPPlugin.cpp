@@ -20,6 +20,8 @@
 #define kSelectionMinBoundFlagLong "-minBound"
 #define kSelectionMaxBoundFlag "-mab"
 #define kSelectionMaxBoundFlagLong "-maxBound"
+#define kSelectionPaletteIndexFlag "-pi"
+#define kSelectionPaletteIndexFlagLong "-paletteIdx"
 
 // Priority order flags
 #define kPriorityOrderFlag "-po"
@@ -44,6 +46,7 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionWorldPositionFlag, kSelectionWorldPositionFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMinBoundFlag, kSelectionMinBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMaxBoundFlag, kSelectionMaxBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
+	syntax.addFlag(kSelectionPaletteIndexFlag, kSelectionPaletteIndexFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
 	return syntax;
 }
@@ -56,6 +59,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  vec3& center,
 	                          vec3& minBound,
 	                          vec3& maxBound,
+							  int& paletteIdx,
 	                          std::vector<int>& priOrder)
 {
 	MStatus stat = MS::kSuccess;
@@ -128,6 +132,18 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlagLong, 1, maxBound[1]);
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlagLong, 2, maxBound[2]);
 	}
+	if (parser.isFlagSet(kSelectionPaletteIndexFlag))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kSelectionPaletteIndexFlag, 0, temp);
+		paletteIdx = (int) temp;
+	}
+	else if (parser.isFlagSet(kSelectionPaletteIndexFlagLong))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kSelectionPaletteIndexFlagLong, 0, temp);
+		paletteIdx = (int) temp;
+	}
 	if (parser.isFlagSet(kPriorityOrderFlag))
 	{
 		int temp = 0;
@@ -163,8 +179,9 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec3 center;
 	vec3 minBound;
 	vec3 maxBound;
+	int paletteIdx;
 	std::vector<int> priOrder;
-	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, priOrder); // get all the arguments
+	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, paletteIdx, priOrder); // get all the arguments
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
 	}
@@ -178,7 +195,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Plugin's functionality
 	//worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
-
+	worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 	// Check that scene objects are found
 	//printString(MString("The first object in the list is: "), worldPalette.currentlySelectedRegion.selectedRegion.objects[0].name);
 

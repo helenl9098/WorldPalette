@@ -26,10 +26,6 @@ global proc reorderPriority()
             $priorityOrder[$i] = $replaced;
             $replaced = $replaced2;
         }
-        print "Testing:\n";
-        for ($i = 0; $i < 3; $i++) {
-            print $priorityOrder[$i];
-        }
     }
 }
 
@@ -176,6 +172,32 @@ global proc saveSelection()
     global string $selectionRegion[];
     global int $selectionType;
     if ($selectionType) {
+        global string $palette[];
+        global int $paletteOccupancy[];
+        global int $numSlots;
+        global int $freeIdx;
+        
+        // Create the image for this button
+        string $ws=`workspace -q -fullName`;
+        string $wsp=$ws + "/WorldPalette/images";
+        sysFile -makeDir $wsp;
+        string $imgFile = $wsp + "/palette" + $freeIdx + ".png";
+        
+        lookThru top; // look through the top camera
+        focusOnCurrentSelection;
+        setAttr ("SelectionLayer" + ".visibility") 0; // Don't show the GUI geometry in the screenshot
+        refresh -cv -fe "png" -fn $imgFile; // take the screenshot
+        setAttr ("SelectionLayer" + ".visibility") 1; // Put the GUI geometry back in
+        lookThru persp; // go back to perspective view
+        
+        iconTextButton -e -i $imgFile $palette[$freeIdx]; // set slot image to screenshot
+        
+        if (!$paletteOccupancy[$freeIdx]) {
+            // This slot is free - fill it
+            $paletteOccupancy[$freeIdx] = 1;
+        }
+        
+        // Send data to save the distribution
         float $width = 0;
         float $height = 0;
         float $boundBox[];
@@ -186,13 +208,46 @@ global proc saveSelection()
             $height = `polyPlane -q -h $selectionRegion`;
             $boundBox = `exactWorldBoundingBox $selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
+            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx;
         } else if ($selectionType == 2) {
             // RADIAL
             $width = `polyCylinder -q -r $selectionRegion[0]`;
             $boundBox = `exactWorldBoundingBox selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
+            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx;
+        }
+        // Update the free slot index
+        $freeIdx = $freeIdx + 1;
+        if ($freeIdx == $numSlots) {
+            $freeIdx = 0; // set back to idx 0
+        }
+    }
+}
+
+global proc getDistributionFromPalette(int $index)
+{
+    // TODO: This is where we will set the brush stroke to use the given distribution!
+    print ("Index: " + $index);
+}
+
+global proc updatePalette()
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    // Set the palette images accordingly
+    // Free slot = default image (sphere.png) for now; Occupied = top view img
+    
+    // Get the image directory
+    string $ws = `workspace -q -fullName`;
+    string $wsp = $ws + "/WorldPalette/images";
+    sysFile -makeDir $wsp; // creates the image directory (if one doesn't already exist)
+    
+    for ($i = 0; $i < $numSlots; $i++) {
+        if ($paletteOccupancy[$i]) {
+            // Set button image to top view image if slot is occupied
+            string $imgFile = $wsp + "/palette" + $i + ".png";
+            iconTextButton -e -i $imgFile $palette[$i];
         }
     }
 }
@@ -207,6 +262,8 @@ global proc ShowGUI()
     global int $selectionType;
     // Priority Order
     global string $scrollPriority;
+    // Palette
+    global string $palette[];
     // Create the GUI window
     string $window = `window -title "WorldPalette GUI" -s 0`;
         columnLayout -adjustableColumn true;
@@ -244,7 +301,17 @@ global proc ShowGUI()
                         button -l "Update Priority" -c updatePriority;
                     setParent ..;
                 frameLayout -label "Palette";
-                //setParent ..;
+                    rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
+                    $palette[0] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
+                    $palette[1] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
+                    $palette[2] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
+                    $palette[3] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
+                    $palette[4] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
+                    $palette[5] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
+                    $palette[6] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
+                    $palette[7] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
+                    $palette[8] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
+                    $palette[9] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
           
     // Find which radio button must be set active
     if ($selectionType) {
@@ -258,6 +325,9 @@ global proc ShowGUI()
     }
     // Append the items to priority order scroll in correct order
     fillPriority;
+    // Update palette images
+    updatePalette;
+    
     showWindow;    
 }
 
@@ -272,9 +342,15 @@ global string $noSelect;
 global string $planarSelect;
 global string $radialSelect;
 global string $scrollPriority;
+global string $palette[];
 
 // Priority Order
 global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
+
+// Distribution Palette
+global int $numSlots = 10;
+global int $freeIdx = 0; // Use the slot at this index for saving
+global int $paletteOccupancy[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // We only support 10 slots for now (0 = free, 1 = occupied)
 
 // Selection Shader
 global string $selectionMat;
