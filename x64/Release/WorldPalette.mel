@@ -274,7 +274,7 @@ global string $radialSelect;
 global string $scrollPriority;
 
 // Priority Order
-global int $priorityOrder[] = { 0, 1, 2 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
+global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
 
 // Selection Shader
 global string $selectionMat;
