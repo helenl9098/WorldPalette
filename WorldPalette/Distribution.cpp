@@ -1,4 +1,5 @@
 #include "Distribution.h"
+#include "WorldPalette.h"
 
 SelectedRegion::SelectedRegion(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos)
 	: selectionType(st), position(pos), width(w), height(h), minBounds(min), maxBounds(max), radius(w)
@@ -248,7 +249,8 @@ void Distribution::calculateHistograms() {
 #endif
 
     // TO DO: have this not be a hard coded priority order
-    CATEGORY priorityList[] = { CATEGORY::ROCK, CATEGORY::TREE, CATEGORY::HOUSE };
+    //CATEGORY priorityList[] = { CATEGORY::ROCK, CATEGORY::TREE, CATEGORY::HOUSE };
+    static std::vector<CATEGORY> priorityList = WorldPalette::priorityOrder;
 
     // **************************
     //1. organize the scene objects by category
@@ -282,7 +284,7 @@ void Distribution::calculateHistograms() {
     // 2. in priority order, we look at the categories, and make pairs
     // *****************************
     // TO DO: Hard coded to 3 for now
-    for (int x = 0; x < 3; x++) {
+    for (int x = 0; x < priorityList.size(); x++) {
         CATEGORY currentCategory = priorityList[x];
         std::vector<std::pair<CATEGORY, std::vector<int>>> currentCategoryHistograms;
         for (int y = 0; y < x + 1; y++) {
