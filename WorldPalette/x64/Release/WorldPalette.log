@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿  Distribution.cpp
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(15,24): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(194,24): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
@@ -44,3 +45,6 @@ C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(158,47): 
     2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   WorldPalette.vcxproj -> C:\Users\Helen\Desktop\WPPlugin\WorldPalette\x64\Release\WorldPalette.mll
+=======
+﻿  WorldPalette.cpp
+>>>>>>> b6e05ff4653125c0ba7899276d51ab9605c5d385

@@ -1,5 +1,7 @@
 #include "WorldPalette.h"
 
+std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
+
 WorldPalette::WorldPalette() {
 	printString(MString("Created World Palette Object"), MString(""));
 }
@@ -27,6 +29,12 @@ void WorldPalette::saveDistribution(SelectionType st, float w, float h, vec3 min
 
 void WorldPalette::deleteDistribution(int index) {
 	palette[index].empty = true;
+}
+
+void WorldPalette::updatePriorityOrder(std::vector<int>& newOrder) {
+	for (int i = 0; i < newOrder.size(); ++i) {
+		WorldPalette::priorityOrder[i] = static_cast<CATEGORY>(newOrder[i]);
+	}
 }
 
 WorldPalette::~WorldPalette()

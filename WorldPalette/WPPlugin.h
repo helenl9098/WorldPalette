@@ -27,6 +27,8 @@ public:
 		                double& height, 
 						vec3& center,
 		                vec3& minBound, 
-		                vec3& maxBound);
+		                vec3& maxBound,
+						int& paletteIdx,
+		                std::vector<int>& priOrder);
 };
 #endif

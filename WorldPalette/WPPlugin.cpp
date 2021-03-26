@@ -4,10 +4,10 @@
 #include <maya/MArgParser.h>
 #include <maya/MArgDatabase.h>
 
-// Argument Flags
-
 #define kNameFlag "-n"
 #define kNameFlagLong "-name"
+
+// Selection flags
 #define kSelectionTypeFlag "-st"
 #define kSelectionTypeFlagLong "-selType"
 #define kSelectionWidthFlag "-w" // this is the radius for radial selection
@@ -19,7 +19,13 @@
 #define kSelectionMinBoundFlag "-mib"
 #define kSelectionMinBoundFlagLong "-minBound"
 #define kSelectionMaxBoundFlag "-mab"
-#define kSelectionMaxBoundFlagLong "maxBound"
+#define kSelectionMaxBoundFlagLong "-maxBound"
+#define kSelectionPaletteIndexFlag "-pi"
+#define kSelectionPaletteIndexFlagLong "-paletteIdx"
+
+// Priority order flags
+#define kPriorityOrderFlag "-po"
+#define kPriorityOrderFlagLong "-priorityOrder"
 
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
@@ -40,6 +46,8 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionWorldPositionFlag, kSelectionWorldPositionFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMinBoundFlag, kSelectionMinBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMaxBoundFlag, kSelectionMaxBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
+	syntax.addFlag(kSelectionPaletteIndexFlag, kSelectionPaletteIndexFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
 	return syntax;
 }
 
@@ -50,7 +58,9 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	                          double& height,
 							  vec3& center,
 	                          vec3& minBound,
-	                          vec3& maxBound)
+	                          vec3& maxBound,
+							  int& paletteIdx,
+	                          std::vector<int>& priOrder)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -60,8 +70,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	if (parser.isFlagSet(kNameFlag))
 	{
 		stat = parser.getFlagArgument(kNameFlag, 0, name);
-	}
-	if (parser.isFlagSet(kNameFlagLong))
+	} else if (parser.isFlagSet(kNameFlagLong))
 	{
 		stat = parser.getFlagArgument(kNameFlag, 0, name);
 	}
@@ -70,8 +79,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		int temp;
 		stat = parser.getFlagArgument(kSelectionTypeFlag, 0, temp);
 		type = (SelectionType) temp;
-	}
-	if (parser.isFlagSet(kSelectionTypeFlagLong))
+	} else if (parser.isFlagSet(kSelectionTypeFlagLong))
 	{
 		int temp;
 		stat = parser.getFlagArgument(kSelectionTypeFlagLong, 0, temp);
@@ -80,16 +88,14 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	if (parser.isFlagSet(kSelectionWidthFlag))
 	{
 		stat = parser.getFlagArgument(kSelectionWidthFlag, 0, width);
-	}
-	if (parser.isFlagSet(kSelectionWidthFlagLong))
+	} else if (parser.isFlagSet(kSelectionWidthFlagLong))
 	{
 		stat = parser.getFlagArgument(kSelectionWidthFlagLong, 0, width);
 	}
 	if (parser.isFlagSet(kSelectionHeightFlag))
 	{
 		stat = parser.getFlagArgument(kSelectionHeightFlag, 0, height);
-	}
-	if (parser.isFlagSet(kSelectionHeightFlagLong))
+	} else if (parser.isFlagSet(kSelectionHeightFlagLong))
 	{
 		stat = parser.getFlagArgument(kSelectionHeightFlagLong, 0, height);
 	}
@@ -98,8 +104,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 0, center[0]);
 		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 1, center[1]);
 		stat = parser.getFlagArgument(kSelectionWorldPositionFlag, 2, center[2]);
-	}
-	if (parser.isFlagSet(kSelectionWorldPositionFlagLong))
+	} else if (parser.isFlagSet(kSelectionWorldPositionFlagLong))
 	{
 		stat = parser.getFlagArgument(kSelectionWorldPositionFlagLong, 0, center[0]);
 		stat = parser.getFlagArgument(kSelectionWorldPositionFlagLong, 1, center[1]);
@@ -110,8 +115,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kSelectionMinBoundFlag, 0, minBound[0]);
 		stat = parser.getFlagArgument(kSelectionMinBoundFlag, 1, minBound[1]);
 		stat = parser.getFlagArgument(kSelectionMinBoundFlag, 2, minBound[2]);
-	}
-	if (parser.isFlagSet(kSelectionMinBoundFlagLong))
+	} else if (parser.isFlagSet(kSelectionMinBoundFlagLong))
 	{
 		stat = parser.getFlagArgument(kSelectionMinBoundFlagLong, 0, minBound[0]);
 		stat = parser.getFlagArgument(kSelectionMinBoundFlagLong, 1, minBound[1]);
@@ -122,12 +126,42 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlag, 0, maxBound[0]);
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlag, 1, maxBound[1]);
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlag, 2, maxBound[2]);
-	}
-	if (parser.isFlagSet(kSelectionMaxBoundFlagLong))
+	} else if (parser.isFlagSet(kSelectionMaxBoundFlagLong))
 	{
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlagLong, 0, maxBound[0]);
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlagLong, 1, maxBound[1]);
 		stat = parser.getFlagArgument(kSelectionMaxBoundFlagLong, 2, maxBound[2]);
+	}
+	if (parser.isFlagSet(kSelectionPaletteIndexFlag))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kSelectionPaletteIndexFlag, 0, temp);
+		paletteIdx = (int) temp;
+	}
+	else if (parser.isFlagSet(kSelectionPaletteIndexFlagLong))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kSelectionPaletteIndexFlagLong, 0, temp);
+		paletteIdx = (int) temp;
+	}
+	if (parser.isFlagSet(kPriorityOrderFlag))
+	{
+		int temp = 0;
+		stat = parser.getFlagArgument(kPriorityOrderFlag, 0, temp);
+		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlag, 1, temp);
+		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlag, 2, temp);
+		priOrder.push_back((int) temp);
+	} else if (parser.isFlagSet(kPriorityOrderFlagLong))
+	{
+		int temp = 0;
+		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 0, temp);
+		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 1, temp);
+		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 2, temp);
+		priOrder.push_back((int) temp);
 	}
 	return stat;
 }
@@ -145,23 +179,29 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec3 center;
 	vec3 minBound;
 	vec3 maxBound;
-	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound);
+	int paletteIdx;
+	std::vector<int> priOrder;
+	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, paletteIdx, priOrder); // get all the arguments
+	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
+		worldPalette.updatePriorityOrder(priOrder);
+	}
 
 	// checking arguments
-	printFloat(MString("Width Argument: "), width);
+	/*printFloat(MString("Width Argument: "), width);
 	printFloat(MString("Height Argument: "), height);
 	printVec3(MString("Min Argument: "), minBound);
 	printVec3(MString("Max Argument: "), maxBound);
-	printVec3(MString("Center Argument: "), center);
+	printVec3(MString("Center Argument: "), center);*/
 
 	// Plugin's functionality
-	worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
-
+	//worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+	worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 	// Check that scene objects are found
 	//printString(MString("The first object in the list is: "), worldPalette.currentlySelectedRegion.selectedRegion.objects[0].name);
 
 	MString caption("Processed Selection!");
-	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + caption + "\" -button \"Ok\" -defaultButton \"Ok\"");
+	MString order((std::string("1st: ") + std::to_string((int)WorldPalette::priorityOrder[0]) + std::string(" 2nd: ") + std::to_string((int)WorldPalette::priorityOrder[1]) + std::string(" 3rd: ") + std::to_string((int)WorldPalette::priorityOrder[2])).c_str());
+	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + order + "\" -button \"Ok\" -defaultButton \"Ok\"");
 	MGlobal::executeCommand(messageBoxCommand);
 	return status;
 }
