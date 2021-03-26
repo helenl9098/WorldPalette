@@ -4,6 +4,9 @@
 #include <maya/MGlobal.h>
 #include "vec.h"
 
+// used for DEBUG print statements
+#define DEBUG true
+
 void printFloat(MString caption, float f);
 
 void printVec3(MString caption, vec3 v);
