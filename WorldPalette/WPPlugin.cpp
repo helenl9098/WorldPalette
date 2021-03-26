@@ -187,17 +187,17 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	}
 
 	// checking arguments
-	/*printFloat(MString("Width Argument: "), width);
+#if DEBUG
+	printFloat(MString("Width Argument: "), width);
 	printFloat(MString("Height Argument: "), height);
 	printVec3(MString("Min Argument: "), minBound);
 	printVec3(MString("Max Argument: "), maxBound);
-	printVec3(MString("Center Argument: "), center);*/
+	printVec3(MString("Center Argument: "), center);
+#endif
 
 	// Plugin's functionality
 	//worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 	worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
-	// Check that scene objects are found
-	//printString(MString("The first object in the list is: "), worldPalette.currentlySelectedRegion.selectedRegion.objects[0].name);
 
 	MString caption("Processed Selection!");
 	MString order((std::string("1st: ") + std::to_string((int)WorldPalette::priorityOrder[0]) + std::string(" 2nd: ") + std::to_string((int)WorldPalette::priorityOrder[1]) + std::string(" 3rd: ") + std::to_string((int)WorldPalette::priorityOrder[2])).c_str());
