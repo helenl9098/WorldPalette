@@ -233,13 +233,13 @@ global proc getDistributionFromPalette(int $index)
     global string $palette[];
     
     // Update currently selected slot
-    if ($currentSlot =! -1) {
-        iconTextButton -e -iol "" $palette[$currentSlot];
+    if ($currentSlot != -1) {
+        iconTextButton -e -nbg true $palette[$currentSlot];
     }
     $currentSlot = $index;
     
     print ("Current selection: " + $currentSlot);
-    iconTextButton -e -iol "X" -olc 1 0 0 $palette[$currentSlot];
+    iconTextButton -e -ebg true -bgc 0 0.75 1 $palette[$currentSlot];
     
     // TODO: This is where we will set the brush stroke to use the given distribution!
 }
@@ -266,9 +266,9 @@ global proc updatePalette()
             string $imgFile = $wsp + "/palette" + $i + ".png";
             if ($currentSlot == $i) {
                 // Mark this button as currently selected
-                iconTextButton -e -i $imgFile -iol "X" -olc 1 0 0 $palette[$i];
+                iconTextButton -e -i $imgFile -ebg true -bgc 0 0.75 1 $palette[$i];
             } else {
-                iconTextButton -e -i $imgFile -iol "" $palette[$i];
+                iconTextButton -e -i $imgFile $palette[$i];
             }
         }
     }
