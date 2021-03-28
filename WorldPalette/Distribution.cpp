@@ -222,12 +222,12 @@ void Distribution::radialDistribution(std::map<CATEGORY, std::vector<SceneObject
     for (SceneObject& currentObject : orderedSceneObjects.at(current)) {
         for (SceneObject& dependentObject : orderedSceneObjects.at(dependent)) {
             if (dependentObject.name != currentObject.name) {
-                float distanceToCenter = Distance(dependentObject.position, currentObject.position);
-                int index = floor(distanceToCenter / increment);
+                float distanceToCurrent= Distance(dependentObject.position, currentObject.position);
+                int index = floor(distanceToCurrent / increment);
 
                 if (index < 0 || index >= numBuckets) {
 #if DEBUG
-                    printFloat(MString("*** Distance To Center"), distanceToCenter);
+                    printFloat(MString("*** Distance To Center"), distanceToCurrent);
                     printFloat(MString("*** WRONG Index"), index);
 #endif
                 }
@@ -283,7 +283,6 @@ void Distribution::calculateHistograms() {
     // *****************************
     // 2. in priority order, we look at the categories, and make pairs
     // *****************************
-    // TO DO: Hard coded to 3 for now
     for (int x = 0; x < priorityList.size(); x++) {
         CATEGORY currentCategory = priorityList[x];
         std::vector<std::pair<CATEGORY, std::vector<int>>> currentCategoryHistograms;
@@ -315,7 +314,7 @@ void Distribution::calculateHistograms() {
                 }
 #endif
 
-            } // TO DO: Add else if for different categories
+            } // TO DO: Add else if for different data types
         } 
 
         // *****************************
