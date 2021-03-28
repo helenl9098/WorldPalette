@@ -29,6 +29,7 @@ public:
 		                vec3& minBound, 
 		                vec3& maxBound,
 						int& paletteIdx,
-		                std::vector<int>& priOrder);
+		                std::vector<int>& priOrder,
+						bool& isGenerating);
 };
 #endif

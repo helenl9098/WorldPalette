@@ -27,6 +27,10 @@
 #define kPriorityOrderFlag "-po"
 #define kPriorityOrderFlagLong "-priorityOrder"
 
+// Generation flags
+#define kIsGeneratingFlag "-ge" // true = use area for saving/generating, false = use area for pasting
+#define kIsGeneratingFlagLong "-isGenerating"
+
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
 // Maya Plugin creator function
@@ -48,6 +52,7 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionMaxBoundFlag, kSelectionMaxBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionPaletteIndexFlag, kSelectionPaletteIndexFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
+	syntax.addFlag(kIsGeneratingFlag, kIsGeneratingFlagLong, MSyntax::kBoolean);
 	return syntax;
 }
 
@@ -60,7 +65,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	                          vec3& minBound,
 	                          vec3& maxBound,
 							  int& paletteIdx,
-	                          std::vector<int>& priOrder)
+	                          std::vector<int>& priOrder,
+							  bool& isGenerating)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -137,8 +143,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		int temp;
 		stat = parser.getFlagArgument(kSelectionPaletteIndexFlag, 0, temp);
 		paletteIdx = (int) temp;
-	}
-	else if (parser.isFlagSet(kSelectionPaletteIndexFlagLong))
+	} else if (parser.isFlagSet(kSelectionPaletteIndexFlagLong))
 	{
 		int temp;
 		stat = parser.getFlagArgument(kSelectionPaletteIndexFlagLong, 0, temp);
@@ -153,7 +158,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		priOrder.push_back((int) temp);
 		stat = parser.getFlagArgument(kPriorityOrderFlag, 2, temp);
 		priOrder.push_back((int) temp);
-	} else if (parser.isFlagSet(kPriorityOrderFlagLong))
+	}  else if (parser.isFlagSet(kPriorityOrderFlagLong))
 	{
 		int temp = 0;
 		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 0, temp);
@@ -162,6 +167,11 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		priOrder.push_back((int) temp);
 		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 2, temp);
 		priOrder.push_back((int) temp);
+	}
+	if (parser.isFlagSet(kIsGeneratingFlag)) {
+		stat = parser.getFlagArgument(kIsGeneratingFlag, 0, isGenerating);
+	} else if (parser.isFlagSet(kIsGeneratingFlagLong)) {
+		stat = parser.getFlagArgument(kIsGeneratingFlagLong, 0, isGenerating);
 	}
 	return stat;
 }
@@ -173,15 +183,18 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// parse files
 	MString name("");
-	SelectionType seltype;
-	double width; // only in one direction, so the true width is twice as long
-	double height; // only in one direction, so the true height is twice as long
+	SelectionType seltype = SelectionType::NONE;
+	double width = 0; // only in one direction, so the true width is twice as long
+	double height = 0; // only in one direction, so the true height is twice as long
 	vec3 center;
 	vec3 minBound;
 	vec3 maxBound;
 	int paletteIdx;
 	std::vector<int> priOrder;
-	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, paletteIdx, priOrder); // get all the arguments
+	bool isGenerating = false; // is the passed in area for generating?
+	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, paletteIdx, priOrder, isGenerating); // get all the arguments
+
+	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
 	}
@@ -196,13 +209,25 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 #endif
 
 	// Plugin's functionality
-	//worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
-	worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 
-	MString caption("Processed Selection!");
-	MString order((std::string("1st: ") + std::to_string((int)WorldPalette::priorityOrder[0]) + std::string(" 2nd: ") + std::to_string((int)WorldPalette::priorityOrder[1]) + std::string(" 3rd: ") + std::to_string((int)WorldPalette::priorityOrder[2])).c_str());
-	MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + order + "\" -button \"Ok\" -defaultButton \"Ok\"");
-	MGlobal::executeCommand(messageBoxCommand);
+	// Check if we're saving/generating or pasting a distribution
+	if (isGenerating) {
+		if (width > 0) {
+			// Saving distribution
+			worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
+		}
+	}
+	else {
+		if (width > 0) {
+			// Delete existing geometry in the region and paste new geometry
+			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
+		}
+	}
+
+	//MString caption("Processed Selection!");
+	//MString order((std::string("1st: ") + std::to_string((int)WorldPalette::priorityOrder[0]) + std::string(" 2nd: ") + std::to_string((int)WorldPalette::priorityOrder[1]) + std::string(" 3rd: ") + std::to_string((int)WorldPalette::priorityOrder[2])).c_str());
+	//MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + order + "\" -button \"Ok\" -defaultButton \"Ok\"");
+	//MGlobal::executeCommand(messageBoxCommand);
 	return status;
 }
 

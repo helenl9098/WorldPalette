@@ -5,7 +5,7 @@ SelectedRegion::SelectedRegion(SelectionType st, float w, float h, vec3 min, vec
 	: selectionType(st), position(pos), width(w), height(h), minBounds(min), maxBounds(max), radius(w)
 {
 	if (st != SelectionType::NONE) {
-		findSceneObjects();
+        addSceneObjectsToVector();
 	}
 }
 
@@ -21,8 +21,8 @@ float SelectedRegion::getArea() {
 * Goes through all the scene objects and finds the ones that are currently in the selected region
 * Looked at : https://download.autodesk.com/us/maya/2010help/api/obj_export_8cpp-example.html
 */
-void SelectedRegion::findSceneObjects() {
-	printString(MString("Finding Scene Objects.."), MString(""));
+void SelectedRegion::addSceneObjectsToVector() {
+	printString(MString("Adding Scene Objects to Vector.."), MString(""));
 
 	MStatus stat;
 

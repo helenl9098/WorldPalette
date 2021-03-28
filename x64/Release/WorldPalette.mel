@@ -53,6 +53,8 @@ global proc fillPriority()
             case 2:
                 textScrollList -e -a "HOUSE" $scrollPriority;
                 break;
+            default:
+                break;
         }
     }
 }
@@ -191,6 +193,7 @@ global proc saveSelection()
         lookThru persp; // go back to perspective view
         
         iconTextButton -e -i $imgFile $palette[$freeIdx]; // set slot image to screenshot
+        iconTextButton -e -en true $palette[$freeIdx]; // make the button selectable
         
         if (!$paletteOccupancy[$freeIdx]) {
             // This slot is free - fill it
@@ -208,13 +211,13 @@ global proc saveSelection()
             $height = `polyPlane -q -h $selectionRegion`;
             $boundBox = `exactWorldBoundingBox $selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx;
+            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         } else if ($selectionType == 2) {
             // RADIAL
             $width = `polyCylinder -q -r $selectionRegion[0]`;
             $boundBox = `exactWorldBoundingBox selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx;
+            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         }
         // Update the free slot index
         $freeIdx = $freeIdx + 1;
@@ -226,8 +229,19 @@ global proc saveSelection()
 
 global proc getDistributionFromPalette(int $index)
 {
+    global int $currentSlot;
+    global string $palette[];
+    
+    // Update currently selected slot
+    if ($currentSlot != -1) {
+        iconTextButton -e -nbg true $palette[$currentSlot];
+    }
+    $currentSlot = $index;
+    
+    print ("Current selection: " + $currentSlot);
+    iconTextButton -e -ebg true -bgc 0 0.75 1 $palette[$currentSlot];
+    
     // TODO: This is where we will set the brush stroke to use the given distribution!
-    print ("Index: " + $index);
 }
 
 global proc updatePalette()
@@ -235,6 +249,7 @@ global proc updatePalette()
     global string $palette[];
     global int $paletteOccupancy[];
     global int $numSlots;
+    global int $currentSlot;
     // Set the palette images accordingly
     // Free slot = default image (sphere.png) for now; Occupied = top view img
     
@@ -245,10 +260,95 @@ global proc updatePalette()
     
     for ($i = 0; $i < $numSlots; $i++) {
         if ($paletteOccupancy[$i]) {
+            // Make the button clickable
+             iconTextButton -e -en true $palette[$i];
             // Set button image to top view image if slot is occupied
             string $imgFile = $wsp + "/palette" + $i + ".png";
-            iconTextButton -e -i $imgFile $palette[$i];
+            if ($currentSlot == $i) {
+                // Mark this button as currently selected
+                iconTextButton -e -i $imgFile -ebg true -bgc 0 0.75 1 $palette[$i];
+            } else {
+                iconTextButton -e -i $imgFile $palette[$i];
+            }
         }
+    }
+}
+
+global proc loadDefaultScene()
+{
+    // Delete all geometry in the scene first
+    string $objects[] = `listTransforms -geometry`;
+    for ($geom in $objects) {
+        if ($geom == "selectionRegion") {
+            continue;
+        }
+        delete $geom;
+    }
+    
+    // Create a bunch of primitives
+    int $numPrims = 20;
+    for ($i = 0; $i < $numPrims; $i++) {
+        int $t = `rand 0 5`;
+        float $rx = `rand -12.5 12.5`;
+        float $rz = `rand -12.5 12.5`;
+        switch ($t) {
+            case 0:
+                polySphere -r 0.5;
+                move -x $rx -z $rz;
+                break;
+            case 1:
+                polyCube -w 1 -h 1;
+                move -x $rx -z $rz;
+                break;
+            case 2:
+                polyCylinder -r 0.5;
+                move -x $rx -z $rz;
+                break;
+            case 3:
+                polyCone -r 0.5;
+                move -x $rx -z $rz;
+                break;
+            case 4:
+                polyTorus -r 0.5;
+                move -x $rx -z $rz;
+                break;
+            default:
+                break;
+        }
+    }
+    
+}
+
+global proc pasteDistribution()
+{
+    global int $currentSlot; // A slot must be selected first for pasting distributions
+    global string $selectionRegion[];
+    global int $selectionType; // There must be a selection region
+    if ($currentSlot != -1) {
+        if ($selectionType) {
+            float $width = 0;
+            float $height = 0;
+            float $boundBox[];
+            float $worldPos[];
+            if ($selectionType == 1) {
+                // PLANAR
+                $width = `polyPlane -q -w $selectionRegion`;
+                $height = `polyPlane -q -h $selectionRegion`;
+                $boundBox = `exactWorldBoundingBox $selectionRegion`;
+                $worldPos = `xform -q -ws -t $selectionRegion`;
+                WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
+            } else if ($selectionType == 2) {
+                // RADIAL
+                $width = `polyCylinder -q -r $selectionRegion[0]`;
+                $boundBox = `exactWorldBoundingBox selectionRegion`;
+                $worldPos = `xform -q -ws -t $selectionRegion`;
+                WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
+            }
+        } else {
+            confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
+        }
+    } else {
+        confirmDialog -t "No Slot Selected" -m "You must first select a distribution from the palette." -b "OK" -icn "warning";
     }
 }
 
@@ -302,16 +402,23 @@ global proc ShowGUI()
                     setParent ..;
                 frameLayout -label "Palette";
                     rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
-                    $palette[0] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
-                    $palette[1] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
-                    $palette[2] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
-                    $palette[3] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
-                    $palette[4] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
-                    $palette[5] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
-                    $palette[6] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
-                    $palette[7] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
-                    $palette[8] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
-                    $palette[9] = `iconTextButton -st "iconOnly" -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
+                    $palette[0] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
+                    $palette[1] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
+                    $palette[2] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
+                    $palette[3] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
+                    $palette[4] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
+                    $palette[5] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
+                    $palette[6] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
+                    $palette[7] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
+                    $palette[8] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
+                    $palette[9] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
+                    setParent ..;
+            frameLayout -label "Scene" -collapsable true;
+                frameLayout -label "Creation";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Load Default Scene" -c loadDefaultScene;
+                        button -l "Paste Distribution" -c pasteDistribution;
+                    setParent ..;
           
     // Find which radio button must be set active
     if ($selectionType) {
@@ -351,6 +458,7 @@ global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPD
 global int $numSlots = 10;
 global int $freeIdx = 0; // Use the slot at this index for saving
 global int $paletteOccupancy[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // We only support 10 slots for now (0 = free, 1 = occupied)
+global int $currentSlot = -1; // currently selected slot/distribution
 
 // Selection Shader
 global string $selectionMat;

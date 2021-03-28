@@ -5,7 +5,7 @@
 #include "vec.h"
 
 // used for DEBUG print statements
-#define DEBUG true
+#define DEBUG false
 
 void printFloat(MString caption, float f);
 
