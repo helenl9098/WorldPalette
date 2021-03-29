@@ -30,10 +30,15 @@ public:
 	void saveDistribution(Distribution d, int index); // saves d in index of palette
 	void saveDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index); // makes a distribution for you
 	void deleteDistribution(int index); // marks the distribution at this index as empty
-	
-	// TO DO: Discuss what to do if user tries to save a distribution in a slot that already has a distribution
-	// TO DO: Discuss way of assigning distributions unique values, for debugging purposes
 
+	int findIndexGivenCategory(CATEGORY c);
+
+	// TO DO: See if we need these
+	//std::vector<float> calculateExampleFX(Distribution d);
+	//float calculateFX(Distribution d, CATEGORY current);
+
+	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
+	
 	// TO DO: add future editing operations here
 	void pasteDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index);
 

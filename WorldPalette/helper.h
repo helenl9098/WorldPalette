@@ -6,6 +6,9 @@
 
 // used for DEBUG print statements
 #define DEBUG false
+#define NUM_BUCKETS 7
+#define NUM_ITERS 600
+#define ELEMENT_BUFFER 3
 
 void printFloat(MString caption, float f);
 

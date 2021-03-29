@@ -68,21 +68,25 @@ class Distribution
 public: 
 	bool empty; // is this an empty distribution? aka if the user selected nothing
 	SelectedRegion selectedRegion;
+	std::map<CATEGORY, std::vector<SceneObject>> sceneObjects;
 
 	// this is what stores all of our histograms
 	// the histograms are pushed back in order of category priority into the vector, from highest priority to least priority
 	// then, for each catgeory, we have the vector of all its pairwise histograms
 	// for each histogram, we have a pair describing the dependent category, and vector for the histogram buckets
-	vector<vector<std::pair<CATEGORY, std::vector<int>>>> histograms;
+	vector<vector<std::pair<CATEGORY, std::vector<float>>>> histograms;
 
 public:
 	Distribution(); // default constructor that makes an empty distribution
-	Distribution(SelectedRegion r);
-	Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos); // makes a selected region for you
+	Distribution(SelectedRegion r, float radius);
+	Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float radius); // makes a selected region for you
 	~Distribution();
 
+	std::map<CATEGORY, std::vector<SceneObject>> sortObjects();
+	float getHistogramIncrement(float radius);
+
 private: 
-	void calculateHistograms();
-	void radialDistribution(std::map<CATEGORY, std::vector<SceneObject>>& orderedSceneObjects, CATEGORY current, CATEGORY dependent, std::vector<int>& histogram);
+	void calculateHistograms(float radius);
+	void radialDistribution(std::map<CATEGORY, std::vector<SceneObject>>& orderedSceneObjects, CATEGORY current, CATEGORY dependent, std::vector<float>& histogram, float radius);
 };
 

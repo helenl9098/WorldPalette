@@ -162,104 +162,34 @@ SelectedRegion::~SelectedRegion() {}
 
 // default constructor that makes an empty distribution
 Distribution::Distribution() 
-	: Distribution(SelectedRegion(SelectionType::NONE, 0, 0, vec3(0, 0, 0), vec3(0, 0 , 0), vec3(0, 0, 0)))
+	: Distribution(SelectedRegion(SelectionType::NONE, 0, 0, vec3(0, 0, 0), vec3(0, 0 , 0), vec3(0, 0, 0)), 0)
 {}
 
-Distribution::Distribution(SelectedRegion r) 
-	: selectedRegion(r), empty(false)
+Distribution::Distribution(SelectedRegion r, float radius)
+    : selectedRegion(r), empty(false)
 {
-	if (r.selectionType == SelectionType::NONE) {
-		empty = true;
-	}
+    if (r.selectionType == SelectionType::NONE) {
+        empty = true;
+    }
 
     // calculate histograms
     if (!empty) {
-        calculateHistograms();
+        calculateHistograms(radius);
     }
 }
 
-Distribution::Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos)
-	: Distribution(SelectedRegion(st, w, h, min, max, pos))
+Distribution::Distribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float radius)
+	: Distribution(SelectedRegion(st, w, h, min, max, pos), radius)
 {}
 
 Distribution::~Distribution() {}
 
-// Returns a histogram for this type of distribution
-void Distribution::radialDistribution(std::map<CATEGORY, std::vector<SceneObject>>& orderedSceneObjects, CATEGORY current, CATEGORY dependent, std::vector<int>& histogram) {
-    int numBuckets = 7; // TO DO: CHANGE BUCKETS LATER
-    int numObjects = 0;
-
-    // calculate the distance of each bucket
-    float increment = 0.f;
-    if (this->selectedRegion.selectionType == SelectionType::PLANAR) {
-        float distance = Distance(this->selectedRegion.maxBounds, this->selectedRegion.position);
-        increment = (distance * 2.0) / numBuckets;
-    }
-    else if (this->selectedRegion.selectionType == SelectionType::RADIAL) {
-        increment = (this->selectedRegion.radius * 2.0) / numBuckets;
-    }
-
-    // initialize all the buckets to be 0 
-    for (int i = 0; i < numBuckets; i++) {
-        histogram.push_back(0);
-    }
-
-#if DEBUG
-    printFloat(MString("*** We've expanded the histogram to be of size: "), numBuckets);
-    printFloat(MString("*** The increment is of size: "), increment);
-#endif
-
-    // if there are no elements with this category, we don't add anything.
-    if (orderedSceneObjects.find(current) == orderedSceneObjects.end() || 
-        orderedSceneObjects.find(dependent) == orderedSceneObjects.end()) {
-#if DEBUG
-        printString(MString("*** Nothing to compare to"), MString(""));
-#endif
-        return;
-    }
-
-    // for each object of the current category, calculate how objects of the dependent category is positioned around it
-    for (SceneObject& currentObject : orderedSceneObjects.at(current)) {
-        for (SceneObject& dependentObject : orderedSceneObjects.at(dependent)) {
-            if (dependentObject.name != currentObject.name) {
-                float distanceToCurrent= Distance(dependentObject.position, currentObject.position);
-                int index = floor(distanceToCurrent / increment);
-
-                if (index < 0 || index >= numBuckets) {
-#if DEBUG
-                    printFloat(MString("*** Distance To Center"), distanceToCurrent);
-                    printFloat(MString("*** WRONG Index"), index);
-#endif
-                }
-                else {
-                    histogram[index]++;
-                }
-                numObjects++;
-            }
-        }
-    }
-
-    // TO DO: See if we need to normalize
-}
-
-void Distribution::calculateHistograms() {
-#if DEBUG
-    printString(MString("****************************************************************"), MString(""));
-    printString(MString("Calculating histograms"), MString(""));
-#endif
-
-    // TO DO: have this not be a hard coded priority order
-    //CATEGORY priorityList[] = { CATEGORY::ROCK, CATEGORY::TREE, CATEGORY::HOUSE };
-    static std::vector<CATEGORY> priorityList = WorldPalette::priorityOrder;
-
-    // **************************
-    //1. organize the scene objects by category
-    // **************************
+std::map<CATEGORY, std::vector<SceneObject>> Distribution::sortObjects() {
     // map the vector of scene objects to the category (doesn't exist in particular order)
     std::map<CATEGORY, std::vector<SceneObject>> orderedSceneObjects;
     // iterate through all the scene objects
-    for (int i = 0; i < selectedRegion.objects.size(); i++) {
-        SceneObject currentObject = selectedRegion.objects[i];
+    for (int i = 0; i < this->selectedRegion.objects.size(); i++) {
+        SceneObject currentObject = this->selectedRegion.objects[i];
         if (orderedSceneObjects.find(currentObject.category) == orderedSceneObjects.end()) {
             // not found
             std::vector<SceneObject> tmpObjs;
@@ -279,13 +209,105 @@ void Distribution::calculateHistograms() {
         printFloat(MString("Items: "), x.second.size());
     }
 #endif
+    this->sceneObjects = orderedSceneObjects;
+    return orderedSceneObjects;
+}
+
+float Distribution::getHistogramIncrement(float radius) {
+    // calculate the distance of each bucket
+    float increment = 0.f;
+    if (this->selectedRegion.selectionType == SelectionType::PLANAR) {
+        float distance = Distance(this->selectedRegion.maxBounds, this->selectedRegion.position);
+        increment = (distance * 2.0) / NUM_BUCKETS;
+    }
+    else if (this->selectedRegion.selectionType == SelectionType::RADIAL) {
+        //increment = (this->selectedRegion.radius * 2.0) / NUM_BUCKETS;
+        increment = radius / NUM_BUCKETS;
+    }
+    return increment;
+}
+
+// Returns a histogram for this type of distribution
+void Distribution::radialDistribution(std::map<CATEGORY, std::vector<SceneObject>>& orderedSceneObjects, CATEGORY current, CATEGORY dependent, std::vector<float>& histogram, float radius) {
+    int numObjects = 0;
+
+    // calculate the distance of each bucket
+    float increment = this->getHistogramIncrement(radius);
+
+    // initialize all the buckets to be 0 
+    for (int i = 0; i < NUM_BUCKETS; i++) {
+        histogram.push_back(0);
+    }
+
+#if DEBUG
+    printFloat(MString("*** We've expanded the histogram to be of size: "), NUM_BUCKETS);
+    printFloat(MString("*** The increment is of size: "), increment);
+#endif
+
+    // if there are no elements with this category, we don't add anything.
+    if (orderedSceneObjects.find(current) == orderedSceneObjects.end() || 
+        orderedSceneObjects.find(dependent) == orderedSceneObjects.end()) {
+#if DEBUG
+        printString(MString("*** Nothing to compare to"), MString(""));
+#endif
+        return;
+    }
+
+    // for each object of the current category, calculate how objects of the dependent category is positioned around it
+    for (SceneObject& currentObject : orderedSceneObjects.at(current)) {
+        for (SceneObject& dependentObject : orderedSceneObjects.at(dependent)) {
+            if (dependentObject.name != currentObject.name) {
+                float distanceToCurrent= Distance(dependentObject.position, currentObject.position);
+                int index = floor(distanceToCurrent / increment);
+
+                if (index < 0 || index >= NUM_BUCKETS) {
+#if DEBUG
+                    printFloat(MString("*** Distance To Center"), distanceToCurrent);
+                    printFloat(MString("*** WRONG Index"), index);
+#endif
+                }
+                else {
+                    histogram[index]++;
+                    numObjects++;
+                }
+            }
+        }
+    }
+
+    // normalize histogram
+    float totalArea = this->selectedRegion.getArea();
+    for (int i = 0; i < NUM_BUCKETS; i++) {
+        // calculate the annular shell area
+        float innerRadius = i * increment;
+        float outerRadius = (i + 1) * increment;
+        float innerArea = M_PI * innerRadius * innerRadius;
+        float outerArea = M_PI * outerRadius * outerRadius;
+
+        float shellArea = outerArea - innerArea;
+        histogram[i] *= totalArea / (shellArea * numObjects);
+    }
+}
+
+void Distribution::calculateHistograms(float radius) {
+#if DEBUG
+    printString(MString("****************************************************************"), MString(""));
+    printString(MString("Calculating histograms"), MString(""));
+#endif
+
+    static std::vector<CATEGORY> priorityList = WorldPalette::priorityOrder;
+
+    // **************************
+    //1. organize the scene objects by category
+    // **************************
+    // map the vector of scene objects to the category (doesn't exist in particular order)
+    this->sortObjects();
 
     // *****************************
     // 2. in priority order, we look at the categories, and make pairs
     // *****************************
     for (int x = 0; x < priorityList.size(); x++) {
         CATEGORY currentCategory = priorityList[x];
-        std::vector<std::pair<CATEGORY, std::vector<int>>> currentCategoryHistograms;
+        std::vector<std::pair<CATEGORY, std::vector<float>>> currentCategoryHistograms;
         for (int y = 0; y < x + 1; y++) {
             CATEGORY dependentCategory = priorityList[y];
             // TO DO: Check the dependent category's type. For now, we assume it's always distribution
@@ -300,9 +322,9 @@ void Distribution::calculateHistograms() {
                 printFloat(MString("Current Category We are Looking At: "), static_cast<std::underlying_type<CATEGORY>::type>(currentCategory));
                 printFloat(MString("Dependent Category We are Looking At: "), static_cast<std::underlying_type<CATEGORY>::type>(dependentCategory));
 #endif
-                std::vector<int> histogram;
-                radialDistribution(orderedSceneObjects, currentCategory, dependentCategory, histogram);
-                std::pair<CATEGORY, std::vector<int>> pairwiseHistogram(dependentCategory, histogram);
+                std::vector<float> histogram;
+                radialDistribution(this->sceneObjects, currentCategory, dependentCategory, histogram, radius);
+                std::pair<CATEGORY, std::vector<float>> pairwiseHistogram(dependentCategory, histogram);
                 currentCategoryHistograms.push_back(pairwiseHistogram);
 
 #if DEBUG
