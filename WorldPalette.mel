@@ -241,7 +241,8 @@ global proc getDistributionFromPalette(int $index)
     print ("Current selection: " + $currentSlot);
     iconTextButton -e -ebg true -bgc 0 0.75 1 $palette[$currentSlot];
     
-    // TODO: This is where we will set the brush stroke to use the given distribution!
+    // This is where we will set the brush stroke to use the given distribution!
+    WorldPalette -ge true -pi $currentSlot;
 }
 
 global proc updatePalette()

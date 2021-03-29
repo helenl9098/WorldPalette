@@ -216,6 +216,11 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		if (width > 0) {
 			// Saving distribution
 			worldPalette.saveDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
+		} else {
+			// Updating currently selected distribution
+			if (paletteIdx >= 0 && paletteIdx < worldPalette.maxPaletteSize) {
+				worldPalette.setCurrentDistribution(worldPalette.palette[paletteIdx]);
+			}
 		}
 	}
 	else {
