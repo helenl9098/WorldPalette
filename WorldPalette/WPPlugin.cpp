@@ -209,6 +209,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 #endif
 
 	// Plugin's functionality
+	// TO DO: We need to do some error checks! (like if w is < 0 etc)
 
 	// Check if we're saving/generating or pasting a distribution
 	if (isGenerating) {
