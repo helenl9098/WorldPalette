@@ -245,6 +245,23 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MString loadPath = plugin.loadPath();
 	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");
 
+	// Create a WorldPalette directory under default workspace
+	MString wsp_path;
+	MGlobal::executeCommand("workspace -q -fullName;", wsp_path);
+	MString w_palette_path = wsp_path + MString("/WorldPalette");
+	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "\"");
+
+	// Copy the obj, mtl and icon files
+	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/objects\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/tree.obj\" " + "\"" + loadPath + "/scene_objects/tree.obj\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/tree.mtl\" " + "\"" + loadPath + "/scene_objects/tree.mtl\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.obj\" " + "\"" + loadPath + "/scene_objects/big_rock.obj\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.mtl\" " + "\"" + loadPath + "/scene_objects/big_rock.mtl\"");
+
+	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/icons\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/tree.png\" " + "\"" + loadPath + "/icons/tree.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/big_rock.png\" " + "\"" + loadPath + "/icons/big_rock.png\"");
+
 	return status;
 }
 // Cleanup Plugin upon unloading

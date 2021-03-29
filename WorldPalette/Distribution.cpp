@@ -99,9 +99,12 @@ void SelectedRegion::addSceneObjectsToVector() {
                     MString name = dagPath.partialPathName();
                     //printString("Mesh + Transform Option: ", name);
 
-                    // 1. ignore the selection region
+                    // 1. ignore the selection region or the mesh objs
                     bool objectInRegion = false;
                     if (name == MString("selectionRegion")) {
+                        continue;
+                    }
+                    if (name == MString("tree:Tree") || name == MString("big_rock:Rock")) {
                         continue;
                     }
 

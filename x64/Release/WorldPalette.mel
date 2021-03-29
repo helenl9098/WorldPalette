@@ -282,41 +282,20 @@ global proc loadDefaultScene()
         if ($geom == "selectionRegion") {
             continue;
         }
+        if ($geom == "tree:Tree" || $geom == "big_rock:Rock") {
+            continue;
+        }
         delete $geom;
     }
     
-    // Create a bunch of primitives
-    int $numPrims = 20;
+    // Create a bunch of scene objects
+    int $numPrims = 8;
     for ($i = 0; $i < $numPrims; $i++) {
-        int $t = `rand 0 5`;
-        float $rx = `rand -12.5 12.5`;
-        float $rz = `rand -12.5 12.5`;
-        switch ($t) {
-            case 0:
-                polySphere -r 0.5;
-                move -x $rx -z $rz;
-                break;
-            case 1:
-                polyCube -w 1 -h 1;
-                move -x $rx -z $rz;
-                break;
-            case 2:
-                polyCylinder -r 0.5;
-                move -x $rx -z $rz;
-                break;
-            case 3:
-                polyCone -r 0.5;
-                move -x $rx -z $rz;
-                break;
-            case 4:
-                polyTorus -r 0.5;
-                move -x $rx -z $rz;
-                break;
-            default:
-                break;
-        }
+        int $t = 1;//`rand 0 2`;
+        float $rx = `rand -1 1`;
+        float $rz = `rand -1 1`;
+        addSceneGeometryAtLoc($t, $rx, 0, $rz);
     }
-    
 }
 
 global proc pasteDistribution()
@@ -352,6 +331,51 @@ global proc pasteDistribution()
     }
 }
 
+global proc addSceneGeom(int $type)
+{
+    // This one generates the geometry at the origin
+    switch($type) {
+        case 0:
+            // ROCK
+            showHidden big_rock:Rock;
+            select -r big_rock:Rock;
+            duplicate -rr;
+            hide big_rock:Rock;
+            break;
+        case 1:
+            // TREE
+            showHidden tree:Tree;
+            select -r tree:Tree;
+            duplicate -rr;
+            hide tree:Tree;
+            break;
+        default:
+            break;
+    }
+}
+
+global proc addSceneGeometryAtLoc(int $type, float $wx, float $wy, float $wz)
+{
+    // This one generates the geometry at given location
+    addSceneGeom($type);
+    move -x $wx -y $wy -z $wz;
+}
+
+global proc importSceneOBJs()
+{
+    // Get the objects directory
+    string $ws = `workspace -q -fullName`;
+    string $objDir = $ws + "/WorldPalette/objects/";
+    
+    // Import objects for tree and rock (UPDATE THIS FUNCTION IF MORE OBJECTS ARE SUPPORTED)
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "big_rock" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "big_rock.obj"); // ROCK
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "tree" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "tree.obj"); // TREE
+    
+    // Hide these imported meshes
+    hide tree:Tree;
+    hide big_rock:Rock;
+}
+
 global proc ShowGUI()
 {
     // Get the necessary global variables
@@ -359,18 +383,22 @@ global proc ShowGUI()
     global string $noSelect;
     global string $planarSelect;
     global string $radialSelect;
+    global string $modeCollection;
     global int $selectionType;
     // Priority Order
     global string $scrollPriority;
     // Palette
     global string $palette[];
+    // Get the path for the object icons
+    string $ws = `workspace -q -fullName`;
+    string $iconDir = $ws + "/WorldPalette/icons/";
     // Create the GUI window
     string $window = `window -title "WorldPalette GUI" -s 0`;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
                     rowColumnLayout -numberOfColumns 3 -columnWidth 1 100 -columnWidth 2 100 -columnWidth 3 100 -cs 2 5 -cs 3 5;
-                        string $modeCollection = `radioCollection`;
+                        $modeCollection = `radioCollection`;
                         $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
@@ -418,6 +446,8 @@ global proc ShowGUI()
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Load Default Scene" -c loadDefaultScene;
                         button -l "Paste Distribution" -c pasteDistribution;
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
                     setParent ..;
           
     // Find which radio button must be set active
@@ -438,6 +468,31 @@ global proc ShowGUI()
     showWindow;    
 }
 
+global proc resetState()
+{
+    global int $selectionType;
+    global int $selectionExists;
+    global string $noSelect;
+    global string $modeCollection;
+    global string $selectionLayer;
+    global string $selectionMat;
+    // Recreate the selection layer
+    $selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
+    setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
+    // Recreate the selection material
+    $selectionMat = `shadingNode -name "selection" -asShader lambert`;
+    setAttr "selection.color" -type double3 0.2 0.8 0.8;
+    setAttr "selection.transparency" -type double3 0.85 0.85 0.85;
+    select -cl  ;
+    // Delete the selection region
+    $selectionType = 0;
+    $selectionExists = false;
+    // Set the radio button to "no selection"
+    radioCollection -edit -select $noSelect $modeCollection;
+    // Reset the scene objects
+    importSceneOBJs(); // re-import scene OBJs
+}
+
 global string $gMainWindow;
 setParent $gMainWindow;
 
@@ -448,6 +503,7 @@ setUpAxis "y";
 global string $noSelect;
 global string $planarSelect;
 global string $radialSelect;
+global string $modeCollection;
 global string $scrollPriority;
 global string $palette[];
 
@@ -491,3 +547,9 @@ $selectionMat = `shadingNode -name "selection" -asShader lambert`;
 setAttr "selection.color" -type double3 0.2 0.8 0.8;
 setAttr "selection.transparency" -type double3 0.85 0.85 0.85;
 select -cl  ;
+
+// Reset the selection region and scene objects if a new scene is created
+scriptJob -event "SceneOpened" resetState;
+
+// Import scene onject meshes
+importSceneOBJs();

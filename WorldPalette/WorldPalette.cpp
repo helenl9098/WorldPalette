@@ -87,9 +87,12 @@ void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound,
                 // We want only the shape, not the transform-extended-to-shape.
                 MString name = dagPath.partialPathName();
 
-                // 1. ignore the selection region
+                // 1. ignore the selection region or the mesh objs
                 bool objectInRegion = false;
                 if (name == MString("selectionRegion")) {
+                    continue;
+                }
+                if (name == MString("tree:Tree") || name == MString("big_rock:Rock")) {
                     continue;
                 }
 
@@ -168,22 +171,16 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 	}
 
 	// Find the positions where the new geometry will be created (THIS IS HARDCODED ATM)
-    // This is currently using a "geomId" counter to give unique names to each pasted new geometry
-    // Not sure if it's necessary though since Maya might be handling that already
     // TODO : Use Metropolis-Hasting to generate the geometry to paste
-	std::vector<SceneObject> geomToPaste;
-	for (int i = -1; i < 2; ++i) {
-		MString name((std::string("NewSphere") + std::to_string(geomId)).c_str());
-		geomToPaste.push_back(SceneObject(LAYER::VEGETATION, CATEGORY::HOUSE, DATATYPE::DISTRIBUTION, vec3(i, 0, i), name));
-		geomId++;
-	}
-	
-	// Use "executeCommand" to create the new geometry (for now this will output 3 spheres on a diagonal)
-	for (SceneObject geom : geomToPaste) {
-		MGlobal::executeCommand("polySphere -r 0.5 -n " + geom.name);
+
+	// Use "executeCommand" to create the new geometry (for now this will output 3 rocks on a diagonal)
+    for (int i = -1; i < 2; ++i) {
+		//MGlobal::executeCommand(");
 		// Get the world position of the geometry
-		vec3 wpos = geom.position + pos;
-		MGlobal::executeCommand((std::string("move -x ") + std::to_string(wpos[0]) + std::string(" -z ") + std::to_string(wpos[2])).c_str());
+		vec3 wpos = vec3(i, 0, i) + pos;
+        std::string com = ","; // comma
+        // The first parameter I'm passing below (0) is the type index (0: rock, 1: tree)
+        MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(0,") + std::to_string(wpos[0]) + com + std::to_string(wpos[1]) + com + std::to_string(wpos[2]) + std::string(")")).c_str());
 	}
 }
 

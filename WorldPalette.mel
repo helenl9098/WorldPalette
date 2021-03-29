@@ -1,0 +1,555 @@
+global proc reorderPriority()
+{
+    global string $scrollPriority;
+    global int $priorityOrder[]; // this keeps track of the updates
+    // Total number of items
+    int $numItems = `textScrollList -q -ni $scrollPriority`;
+    // Get selected item index
+    int $clickedItem[] = `textScrollList -q -sii $scrollPriority`;
+    // Get all items
+    string $allItems[] = `textScrollList -q -ai $scrollPriority`;
+    // If the first item is already the clicked item, do nothing
+    if ($allItems[0] == $allItems[$clickedItem[0] - 1]) {
+        return;
+    } else {
+        // Bring this item to the top
+        textScrollList -e -ap 1 ($allItems[$clickedItem[0] - 1] + "") $scrollPriority;
+        // Remove the item at the old position
+        textScrollList -e -rii ($clickedItem[0] + 1) $scrollPriority;
+        
+        // Update the priority order array
+        // Shift elements until you get to the moved item's index
+        int $replaced = $priorityOrder[0];
+        $priorityOrder[0] = $priorityOrder[$clickedItem[0] - 1];
+        for ($i = 1; $i < $clickedItem[0]; $i++) {
+            int $replaced2 = $priorityOrder[$i];
+            $priorityOrder[$i] = $replaced;
+            $replaced = $replaced2;
+        }
+    }
+}
+
+global proc updatePriority()
+{
+    // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
+    global int $priorityOrder[];
+    // Send updated order to C++
+    WorldPalette -po $priorityOrder[0] $priorityOrder[1] $priorityOrder[2];
+}
+
+global proc fillPriority()
+{
+    // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
+    global string $scrollPriority;
+    global int $priorityOrder[];
+    for ($i = 0; $i < 3; $i++) {
+        switch($priorityOrder[$i]) {
+            case 0:
+                textScrollList -e -a "ROCK" $scrollPriority;
+                break;
+            case 1:
+                textScrollList -e -a "TREE" $scrollPriority;
+                break;
+            case 2:
+                textScrollList -e -a "HOUSE" $scrollPriority;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+global proc deleteCurrentSelectRegion()
+{
+    global int $selectionType;
+    global string $selectionRegion[];
+    // Delete current selection region (if there is one)
+    if ($selectionType) {
+        select -r $selectionRegion[0];
+        delete;
+        $selectionType = 0;
+    }
+}
+
+global proc makePlanarSelectRegion()
+{
+    global string $selectionMat;
+    global string $selectionRegion[];
+    global int $selectionType;
+    global string $selectionLayer;
+    if ($selectionType != 1) {
+        // Create a 2-D selection bound from a plane
+        $selectionRegion = `polyPlane -name "selectionRegion"`;
+        scale -r 2 2 2;
+        // Assign selection material to plane
+        hyperShade -assign $selectionMat;
+        $selectionType = 1;
+        // Add the plane to selectionLayer
+        layerEditorAddObjects $selectionLayer;
+        select -cl  ; // deselect
+    }
+}
+
+global proc makeRadialSelectRegion()
+{
+    global string $selectionMat;
+    global string $selectionRegion[];
+    global int $selectionType;
+    global string $selectionLayer;
+    if ($selectionType != 2) {
+        // Create a 2-D selection bound from a disc
+        $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
+        // Assign selection material to disc
+        hyperShade -assign $selectionMat;
+        $selectionType = 2;
+        // Add the disc to selectionLayer
+        layerEditorAddObjects $selectionLayer;
+        select -cl  ; // deselect
+    }
+}
+
+global proc focusOnCurrentSelection()
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType) {
+        select -r $selectionRegion[0];
+        viewFit -f 0.;
+        select -cl  ; // deselect
+    }
+}
+
+global proc moveAlongAxis(float $val, int $axis)
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            // Add onto current X position
+            move -x ($val + (getAttr ($selectionRegion[0] + ".translateX")));
+        } else if ($axis == 1) {
+            // Add onto current Z position
+            move -z ($val + (getAttr ($selectionRegion[0] + ".translateZ")));
+        }
+        select -cl  ; // deselect
+    }
+}
+
+global proc scaleRegion(float $val, int $axis)
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType == 1) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            float $width = `polyPlane -q -w $selectionRegion`;
+            if ($width + $val > 0) {
+                // increase/decrease width
+                setAttr ($selectionRegion[1] + ".width") ($width + $val);
+            }
+        } else if ($axis == 1) {
+            float $height = `polyPlane -q -h $selectionRegion`;
+            if ($height + $val > 0) {
+                // increase/decrease height
+                setAttr ($selectionRegion[1] + ".height") ($height + $val);
+            }
+        }
+        select -cl  ; // deselect
+    } else if ($selectionType == 2) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            float $rad = `polyCylinder -q -r $selectionRegion[0]`;
+            if ($rad + $val > 0) {
+                // increase/decrease radius
+                setAttr ($selectionRegion[1] + ".radius") ($rad + $val);
+            }
+        }
+        select -cl  ; // deselect
+    }
+}
+
+global proc saveSelection()
+{
+    global string $selectionRegion[];
+    global int $selectionType;
+    if ($selectionType) {
+        global string $palette[];
+        global int $paletteOccupancy[];
+        global int $numSlots;
+        global int $freeIdx;
+        
+        // Create the image for this button
+        string $ws=`workspace -q -fullName`;
+        string $wsp=$ws + "/WorldPalette/images";
+        sysFile -makeDir $wsp;
+        string $imgFile = $wsp + "/palette" + $freeIdx + ".png";
+        
+        lookThru top; // look through the top camera
+        focusOnCurrentSelection;
+        setAttr ("SelectionLayer" + ".visibility") 0; // Don't show the GUI geometry in the screenshot
+        refresh -cv -fe "png" -fn $imgFile; // take the screenshot
+        setAttr ("SelectionLayer" + ".visibility") 1; // Put the GUI geometry back in
+        lookThru persp; // go back to perspective view
+        
+        iconTextButton -e -i $imgFile $palette[$freeIdx]; // set slot image to screenshot
+        iconTextButton -e -en true $palette[$freeIdx]; // make the button selectable
+        
+        if (!$paletteOccupancy[$freeIdx]) {
+            // This slot is free - fill it
+            $paletteOccupancy[$freeIdx] = 1;
+        }
+        
+        // Send data to save the distribution
+        float $width = 0;
+        float $height = 0;
+        float $boundBox[];
+        float $worldPos[];
+        if ($selectionType == 1) {
+            // PLANAR
+            $width = `polyPlane -q -w $selectionRegion`;
+            $height = `polyPlane -q -h $selectionRegion`;
+            $boundBox = `exactWorldBoundingBox $selectionRegion`;
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
+        } else if ($selectionType == 2) {
+            // RADIAL
+            $width = `polyCylinder -q -r $selectionRegion[0]`;
+            $boundBox = `exactWorldBoundingBox selectionRegion`;
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
+        }
+        // Update the free slot index
+        $freeIdx = $freeIdx + 1;
+        if ($freeIdx == $numSlots) {
+            $freeIdx = 0; // set back to idx 0
+        }
+    }
+}
+
+global proc getDistributionFromPalette(int $index)
+{
+    global int $currentSlot;
+    global string $palette[];
+    
+    // Update currently selected slot
+    if ($currentSlot != -1) {
+        iconTextButton -e -nbg true $palette[$currentSlot];
+    }
+    $currentSlot = $index;
+    
+    print ("Current selection: " + $currentSlot);
+    iconTextButton -e -ebg true -bgc 0 0.75 1 $palette[$currentSlot];
+    
+    // TODO: This is where we will set the brush stroke to use the given distribution!
+}
+
+global proc updatePalette()
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    // Set the palette images accordingly
+    // Free slot = default image (sphere.png) for now; Occupied = top view img
+    
+    // Get the image directory
+    string $ws = `workspace -q -fullName`;
+    string $wsp = $ws + "/WorldPalette/images";
+    sysFile -makeDir $wsp; // creates the image directory (if one doesn't already exist)
+    
+    for ($i = 0; $i < $numSlots; $i++) {
+        if ($paletteOccupancy[$i]) {
+            // Make the button clickable
+             iconTextButton -e -en true $palette[$i];
+            // Set button image to top view image if slot is occupied
+            string $imgFile = $wsp + "/palette" + $i + ".png";
+            if ($currentSlot == $i) {
+                // Mark this button as currently selected
+                iconTextButton -e -i $imgFile -ebg true -bgc 0 0.75 1 $palette[$i];
+            } else {
+                iconTextButton -e -i $imgFile $palette[$i];
+            }
+        }
+    }
+}
+
+global proc loadDefaultScene()
+{
+    // Delete all geometry in the scene first
+    string $objects[] = `listTransforms -geometry`;
+    for ($geom in $objects) {
+        if ($geom == "selectionRegion") {
+            continue;
+        }
+        if ($geom == "tree:Tree" || $geom == "big_rock:Rock") {
+            continue;
+        }
+        delete $geom;
+    }
+    
+    // Create a bunch of scene objects
+    int $numPrims = 8;
+    for ($i = 0; $i < $numPrims; $i++) {
+        int $t = 1;//`rand 0 2`;
+        float $rx = `rand -1 1`;
+        float $rz = `rand -1 1`;
+        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+    }
+}
+
+global proc pasteDistribution()
+{
+    global int $currentSlot; // A slot must be selected first for pasting distributions
+    global string $selectionRegion[];
+    global int $selectionType; // There must be a selection region
+    if ($currentSlot != -1) {
+        if ($selectionType) {
+            float $width = 0;
+            float $height = 0;
+            float $boundBox[];
+            float $worldPos[];
+            if ($selectionType == 1) {
+                // PLANAR
+                $width = `polyPlane -q -w $selectionRegion`;
+                $height = `polyPlane -q -h $selectionRegion`;
+                $boundBox = `exactWorldBoundingBox $selectionRegion`;
+                $worldPos = `xform -q -ws -t $selectionRegion`;
+                WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
+            } else if ($selectionType == 2) {
+                // RADIAL
+                $width = `polyCylinder -q -r $selectionRegion[0]`;
+                $boundBox = `exactWorldBoundingBox selectionRegion`;
+                $worldPos = `xform -q -ws -t $selectionRegion`;
+                WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
+            }
+        } else {
+            confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
+        }
+    } else {
+        confirmDialog -t "No Slot Selected" -m "You must first select a distribution from the palette." -b "OK" -icn "warning";
+    }
+}
+
+global proc addSceneGeom(int $type)
+{
+    // This one generates the geometry at the origin
+    switch($type) {
+        case 0:
+            // ROCK
+            showHidden big_rock:Rock;
+            select -r big_rock:Rock;
+            duplicate -rr;
+            hide big_rock:Rock;
+            break;
+        case 1:
+            // TREE
+            showHidden tree:Tree;
+            select -r tree:Tree;
+            duplicate -rr;
+            hide tree:Tree;
+            break;
+        default:
+            break;
+    }
+}
+
+global proc addSceneGeometryAtLoc(int $type, float $wx, float $wy, float $wz)
+{
+    // This one generates the geometry at given location
+    addSceneGeom($type);
+    move -x $wx -y $wy -z $wz;
+}
+
+global proc importSceneOBJs()
+{
+    // Get the objects directory
+    string $ws = `workspace -q -fullName`;
+    string $objDir = $ws + "/WorldPalette/objects/";
+    
+    // Import objects for tree and rock (UPDATE THIS FUNCTION IF MORE OBJECTS ARE SUPPORTED)
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "big_rock" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "big_rock.obj"); // ROCK
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "tree" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "tree.obj"); // TREE
+    
+    // Hide these imported meshes
+    hide tree:Tree;
+    hide big_rock:Rock;
+}
+
+global proc ShowGUI()
+{
+    // Get the necessary global variables
+    // Selection
+    global string $noSelect;
+    global string $planarSelect;
+    global string $radialSelect;
+    global string $modeCollection;
+    global int $selectionType;
+    // Priority Order
+    global string $scrollPriority;
+    // Palette
+    global string $palette[];
+    // Get the path for the object icons
+    string $ws = `workspace -q -fullName`;
+    string $iconDir = $ws + "/WorldPalette/icons/";
+    // Create the GUI window
+    string $window = `window -title "WorldPalette GUI" -s 0`;
+        columnLayout -adjustableColumn true;
+            frameLayout -label "Selection" -collapsable true;
+                frameLayout -label "Selection Mode";
+                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 100 -columnWidth 2 100 -columnWidth 3 100 -cs 2 5 -cs 3 5;
+                        $modeCollection = `radioCollection`;
+                        $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
+                        $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
+                        $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
+                        setParent ..;
+                    setParent ..;
+                frameLayout -label "Move Selection";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
+                        setParent ..;
+                    setParent ..;
+                frameLayout -label "Resize Selection";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Increase Width" -c "scaleRegion(0.5, 0)"; button -l "Decrease Width" -c "scaleRegion(-0.5, 0)";
+                        button -l "Increase Height" -c "scaleRegion(0.5, 1)"; button -l "Decrease Height" -c "scaleRegion(-0.5, 1)";
+                        setParent ..;
+                    setParent ..;
+                frameLayout -label "Other Options";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Focus On Selection Region" -c focusOnCurrentSelection;
+                        button -l "Save Selection to Palette" -c saveSelection;
+                        setParent ..;
+                    setParent ..;
+            frameLayout -label "Distribution" -collapsable true;
+                frameLayout -label "Priority Order";
+                    columnLayout -columnAttach "both" 5 -rowSpacing 10;
+                        $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
+                        button -l "Update Priority" -c updatePriority;
+                    setParent ..;
+                frameLayout -label "Palette";
+                    rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
+                    $palette[0] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
+                    $palette[1] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
+                    $palette[2] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
+                    $palette[3] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
+                    $palette[4] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
+                    $palette[5] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
+                    $palette[6] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
+                    $palette[7] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
+                    $palette[8] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
+                    $palette[9] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
+                    setParent ..;
+            frameLayout -label "Scene" -collapsable true;
+                frameLayout -label "Creation";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Load Default Scene" -c loadDefaultScene;
+                        button -l "Paste Distribution" -c pasteDistribution;
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
+                    setParent ..;
+          
+    // Find which radio button must be set active
+    if ($selectionType) {
+        if ($selectionType == 1) {
+            radioCollection -edit -select $planarSelect $modeCollection; 
+        } else if ($selectionType == 2) {
+            radioCollection -edit -select $radialSelect $modeCollection; 
+        }
+    } else {
+        radioCollection -edit -select $noSelect $modeCollection; 
+    }
+    // Append the items to priority order scroll in correct order
+    fillPriority;
+    // Update palette images
+    updatePalette;
+    
+    showWindow;    
+}
+
+global proc resetState()
+{
+    global int $selectionType;
+    global int $selectionExists;
+    global string $noSelect;
+    global string $modeCollection;
+    global string $selectionLayer;
+    global string $selectionMat;
+    // Recreate the selection layer
+    $selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
+    setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
+    // Recreate the selection material
+    $selectionMat = `shadingNode -name "selection" -asShader lambert`;
+    setAttr "selection.color" -type double3 0.2 0.8 0.8;
+    setAttr "selection.transparency" -type double3 0.85 0.85 0.85;
+    select -cl  ;
+    // Delete the selection region
+    $selectionType = 0;
+    $selectionExists = false;
+    // Set the radio button to "no selection"
+    radioCollection -edit -select $noSelect $modeCollection;
+    // Reset the scene objects
+    importSceneOBJs(); // re-import scene OBJs
+}
+
+global string $gMainWindow;
+setParent $gMainWindow;
+
+// Set Y as up axis
+setUpAxis "y";
+
+// GUI Items
+global string $noSelect;
+global string $planarSelect;
+global string $radialSelect;
+global string $modeCollection;
+global string $scrollPriority;
+global string $palette[];
+
+// Priority Order
+global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
+
+// Distribution Palette
+global int $numSlots = 10;
+global int $freeIdx = 0; // Use the slot at this index for saving
+global int $paletteOccupancy[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // We only support 10 slots for now (0 = free, 1 = occupied)
+global int $currentSlot = -1; // currently selected slot/distribution
+
+// Selection Shader
+global string $selectionMat;
+
+// Selection Region
+global int $selectionExists = false;
+global string $selectionRegion[];
+global int $selectionType = 0;
+
+// Create the selection display layer
+global string $selectionLayer;
+$selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
+setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
+
+// adds a new drop down menu
+menu -l "World Palette"
+-p MayaWindow
+-to 1
+-aob true
+NewDropDownMenu;
+
+// add an item to the drop down menu
+menuItem -l "Show GUI"
+-echoCommand true
+-c ShowGUI
+NewDropDownMenuItem1;
+
+// Create selection shader
+$selectionMat = `shadingNode -name "selection" -asShader lambert`;
+setAttr "selection.color" -type double3 0.2 0.8 0.8;
+setAttr "selection.transparency" -type double3 0.85 0.85 0.85;
+select -cl  ;
+
+// Reset the selection region and scene objects if a new scene is created
+scriptJob -event "SceneOpened" resetState;
+
+// Import scene onject meshes
+importSceneOBJs();
