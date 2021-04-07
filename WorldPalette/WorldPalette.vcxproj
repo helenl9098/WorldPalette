@@ -22,6 +22,7 @@
     <ClInclude Include="Distribution.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="matrix.h" />
+    <ClInclude Include="Terrain.h" />
     <ClInclude Include="vec.h" />
     <ClInclude Include="WorldPalette.h" />
     <ClInclude Include="WPPlugin.h" />
@@ -29,6 +30,7 @@
   <ItemGroup>
     <ClCompile Include="Distribution.cpp" />
     <ClCompile Include="helper.cpp" />
+    <ClCompile Include="Terrain.cpp" />
     <ClCompile Include="vec.cpp" />
     <ClCompile Include="WorldPalette.cpp" />
     <ClCompile Include="WPPlugin.cpp" />

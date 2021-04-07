@@ -77,15 +77,21 @@ global proc makePlanarSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
+    int $res = 20; // plane resolution
     if ($selectionType != 1) {
         // Create a 2-D selection bound from a plane
-        $selectionRegion = `polyPlane -name "selectionRegion"`;
+        $selectionRegion = `polyPlane -name "selectionRegion" -sw $res -sh $res`;
         scale -r 2 2 2;
+        
         // Assign selection material to plane
         hyperShade -assign $selectionMat;
         $selectionType = 1;
         // Add the plane to selectionLayer
         layerEditorAddObjects $selectionLayer;
+        
+        // Map region vertices to terrain height
+        WorldPalette -msr true;
+        
         select -cl  ; // deselect
     }
 }
@@ -96,14 +102,20 @@ global proc makeRadialSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
+    int $res = 20; // disk resolution
     if ($selectionType != 2) {
         // Create a 2-D selection bound from a disc
-        $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010`;
+        $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010 -sx $res -sz $res`;
+        
         // Assign selection material to disc
         hyperShade -assign $selectionMat;
         $selectionType = 2;
         // Add the disc to selectionLayer
         layerEditorAddObjects $selectionLayer;
+        
+        // Map region vertices to terrain height
+        WorldPalette -msr true;
+        
         select -cl  ; // deselect
     }
 }
@@ -133,6 +145,9 @@ global proc moveAlongAxis(float $val, int $axis)
             move -z ($val + (getAttr ($selectionRegion[0] + ".translateZ")));
         }
         select -cl  ; // deselect
+        
+        // Map region vertices to terrain height
+        WorldPalette -msr true;
     }
 }
 
@@ -156,6 +171,8 @@ global proc scaleRegion(float $val, int $axis)
             }
         }
         select -cl  ; // deselect
+        // Map region vertices to terrain height
+        WorldPalette -msr true;
     } else if ($selectionType == 2) {
         select -r $selectionRegion[0];
         if ($axis == 0) {
@@ -166,6 +183,8 @@ global proc scaleRegion(float $val, int $axis)
             }
         }
         select -cl  ; // deselect
+        // Map region vertices to terrain height
+        WorldPalette -msr true;
     }
 }
 
@@ -377,8 +396,56 @@ global proc importSceneOBJs()
     hide big_rock:Rock;
 }
 
+global proc loadTerrain()
+{
+    global int $isTerrainLoaded;
+    global int $numTerrainLoads;
+    if ($isTerrainLoaded) {
+        // There is already a terrain - user must delete it first
+        confirmDialog -t "Load Terrain" -m "There already exists a terrain. You must delete this existing terrain first." -b "OK" -icn "warning";
+    } else {
+        // Get the terrains directory
+        string $ws = `workspace -q -fullName`;
+        string $terDir = $ws + "/WorldPalette/terrains/";
+        // For now we always import the same terrain (we only support terrain.obj for now)
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($terDir + "terrain.obj");
+        $numTerrainLoads += 1;
+        if ($numTerrainLoads) {
+            WorldPalette -tn ("terrain" + $numTerrainLoads + ":pPlane1") -tw 50 -th 50 -tsw 100 -tsh 100;
+        } else {
+            WorldPalette -tn "terrain:pPlane1" -tw 50 -th 50 -tsw 100 -tsh 100;
+        }
+        $isTerrainLoaded = true;
+    }
+}
+
+global proc deleteTerrain()
+{
+    global int $isTerrainLoaded;
+    global int $numTerrainLoads;
+    if ($isTerrainLoaded) {
+        if ($numTerrainLoads) {
+            select -r ("terrain" + ($numTerrainLoads) + ":pPlane1");
+        } else {
+            select -r "terrain:pPlane1";
+        }
+        delete;
+        $isTerrainLoaded = false;
+    } else {
+        // There isn't a terrain to delete
+        confirmDialog -t "Delete Terrain" -m "There is no terrain." -b "OK" -icn "warning";
+    }
+}
+
+global proc closeWindow()
+{
+    global int $isGUIOpen;
+    $isGUIOpen = false;
+}
+
 global proc ShowGUI()
 {
+    global int $isGUIOpen;
     // Get the necessary global variables
     // Selection
     global string $noSelect;
@@ -394,7 +461,7 @@ global proc ShowGUI()
     string $ws = `workspace -q -fullName`;
     string $iconDir = $ws + "/WorldPalette/icons/";
     // Create the GUI window
-    string $window = `window -title "WorldPalette GUI" -s 0`;
+    string $window = `window -title "WorldPalette GUI" -s 0 -cc closeWindow`;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
@@ -449,6 +516,8 @@ global proc ShowGUI()
                         button -l "Paste Distribution" -c pasteDistribution;
                         iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
                         iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
+                        button -l "Load Terrain" -c loadTerrain;
+                        button -l "Delete Terrain" -c deleteTerrain;
                     setParent ..;
           
     // Find which radio button must be set active
@@ -466,17 +535,24 @@ global proc ShowGUI()
     // Update palette images
     updatePalette;
     
-    showWindow;    
+    showWindow;
+    $isGUIOpen = true;    
 }
 
 global proc resetState()
 {
+    global int $isGUIOpen;
     global int $selectionType;
     global int $selectionExists;
     global string $noSelect;
     global string $modeCollection;
     global string $selectionLayer;
     global string $selectionMat;
+    global int $isTerrainLoaded;
+    global int $numTerrainLoads;
+    // Reset terrain
+    $isTerrainLoaded = false;
+    $numTerrainLoads = -1;
     // Recreate the selection layer
     $selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
     setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
@@ -488,8 +564,10 @@ global proc resetState()
     // Delete the selection region
     $selectionType = 0;
     $selectionExists = false;
-    // Set the radio button to "no selection"
-    radioCollection -edit -select $noSelect $modeCollection;
+    if ($isGUIOpen) {
+        // Set the radio button to "no selection" if the GUI window is open
+        radioCollection -edit -select $noSelect $modeCollection;
+    }
     // Reset the scene objects
     importSceneOBJs(); // re-import scene OBJs
 }
@@ -507,6 +585,11 @@ global string $radialSelect;
 global string $modeCollection;
 global string $scrollPriority;
 global string $palette[];
+global int $isGUIOpen = false;
+
+// Terrain
+global int $isTerrainLoaded = false;
+global int $numTerrainLoads = -1;
 
 // Priority Order
 global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)

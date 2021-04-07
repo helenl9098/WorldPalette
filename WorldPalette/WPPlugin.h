@@ -6,10 +6,12 @@
 #include <maya/MGlobal.h>
 #include <maya/MPxCommand.h>
 #include "Distribution.h"
+#include "Terrain.h"
 #include "WorldPalette.h"
 #include "helper.h"
 
 WorldPalette worldPalette;
+Terrain terrain;
 
 // custom Maya command
 class WPPlugin : public MPxCommand
@@ -30,6 +32,12 @@ public:
 		                vec3& maxBound,
 						int& paletteIdx,
 		                std::vector<int>& priOrder,
-						bool& isGenerating);
+						bool& isGenerating,
+						bool& moveSelRegion,
+						MString& terrainName,
+						double& terrainWidth,
+						double& terrainHeight,
+						int& terrainSubWidth,
+						int& terrainSubHeight);
 };
 #endif

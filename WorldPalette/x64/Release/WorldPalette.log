@@ -1,12 +1,14 @@
 ﻿  WPPlugin.cpp
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(218,50): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(218,43): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(229,51): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(229,44): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(299,48): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(299,34): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(323,50): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(323,43): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(334,51): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\WPPlugin.cpp(334,44): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
      Creating library C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.lib and object C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.exp
   Generating code
-  28 of 770 functions ( 3.6%) were compiled, the rest were copied from previous compilation.
-    12 functions were new in current compilation
-    50 functions had inline decision re-evaluated but remain unchanged
+  1 of 937 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   WorldPalette.vcxproj -> C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.mll

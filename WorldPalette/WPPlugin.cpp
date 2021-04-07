@@ -7,7 +7,7 @@
 #define kNameFlag "-n"
 #define kNameFlagLong "-name"
 
-// Selection flags
+// Selection region flags
 #define kSelectionTypeFlag "-st"
 #define kSelectionTypeFlagLong "-selType"
 #define kSelectionWidthFlag "-w" // this is the radius for radial selection
@@ -22,6 +22,8 @@
 #define kSelectionMaxBoundFlagLong "-maxBound"
 #define kSelectionPaletteIndexFlag "-pi"
 #define kSelectionPaletteIndexFlagLong "-paletteIdx"
+#define kMoveSelectionRegionFlag "-msr"
+#define kMoveSelectionRegionFlagLong "-moveSelRegion"
 
 // Priority order flags
 #define kPriorityOrderFlag "-po"
@@ -30,6 +32,18 @@
 // Generation flags
 #define kIsGeneratingFlag "-ge" // true = use area for saving/generating, false = use area for pasting
 #define kIsGeneratingFlagLong "-isGenerating"
+
+// Height visualization/terrain flags
+#define kTerrainNameFlag "-tn"
+#define kTerrainNameFlagLong "-terrainName"
+#define kTerrainWidthFlag "-tw"
+#define kTerrainWidthFlagLong "-terrainWidth"
+#define kTerrainHeightFlag "-th"
+#define kTerrainHeightFlagLong "-terrainHeight"
+#define kTerrainSubdivisionWidthFlag "-tsw"
+#define kTerrainSubdivisionWidthFlagLong "-terrainSubWidth"
+#define kTerrainSubdivisionHeightFlag "-tsh"
+#define kTerrainSubdivisionHeightFlagLong "-terrainSubHeight"
 
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
@@ -44,6 +58,7 @@ MSyntax WPPlugin::newSyntax()
 {
 	MSyntax syntax;
 	syntax.addFlag(kNameFlag, kNameFlagLong, MSyntax::kString);
+
 	syntax.addFlag(kSelectionTypeFlag, kSelectionTypeFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSelectionWidthFlag, kSelectionWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSelectionHeightFlag, kSelectionHeightFlagLong, MSyntax::kDouble);
@@ -51,8 +66,17 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionMinBoundFlag, kSelectionMinBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionMaxBoundFlag, kSelectionMaxBoundFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kSelectionPaletteIndexFlag, kSelectionPaletteIndexFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kMoveSelectionRegionFlag, kMoveSelectionRegionFlagLong, MSyntax::kDouble);
+
 	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
+
 	syntax.addFlag(kIsGeneratingFlag, kIsGeneratingFlagLong, MSyntax::kBoolean);
+
+	syntax.addFlag(kTerrainNameFlag, kTerrainNameFlagLong, MSyntax::kString);
+	syntax.addFlag(kTerrainWidthFlag, kTerrainWidthFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kTerrainHeightFlag, kTerrainHeightFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kTerrainSubdivisionWidthFlag, kTerrainSubdivisionWidthFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kTerrainSubdivisionHeightFlag, kTerrainSubdivisionHeightFlagLong, MSyntax::kDouble);
 	return syntax;
 }
 
@@ -66,7 +90,13 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	                          vec3& maxBound,
 							  int& paletteIdx,
 	                          std::vector<int>& priOrder,
-							  bool& isGenerating)
+							  bool& isGenerating,
+							  bool& moveSelRegion,
+							  MString& terrainName,
+							  double& terrainWidth,
+							  double& terrainHeight,
+							  int& terrainSubWidth,
+							  int& terrainSubHeight)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -168,10 +198,62 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 2, temp);
 		priOrder.push_back((int) temp);
 	}
-	if (parser.isFlagSet(kIsGeneratingFlag)) {
+	if (parser.isFlagSet(kIsGeneratingFlag)) 
+	{
 		stat = parser.getFlagArgument(kIsGeneratingFlag, 0, isGenerating);
-	} else if (parser.isFlagSet(kIsGeneratingFlagLong)) {
+	} else if (parser.isFlagSet(kIsGeneratingFlagLong)) 
+	{
 		stat = parser.getFlagArgument(kIsGeneratingFlagLong, 0, isGenerating);
+	}
+	if (parser.isFlagSet(kMoveSelectionRegionFlag))
+	{
+		stat = parser.getFlagArgument(kMoveSelectionRegionFlag, 0, moveSelRegion);
+	} else if (parser.isFlagSet(kMoveSelectionRegionFlagLong))
+	{
+		stat = parser.getFlagArgument(kMoveSelectionRegionFlagLong, 0, moveSelRegion);
+	}
+	if (parser.isFlagSet(kTerrainNameFlag))
+	{
+		stat = parser.getFlagArgument(kTerrainNameFlag, 0, terrainName);
+	} else if (parser.isFlagSet(kTerrainNameFlagLong))
+	{
+		stat = parser.getFlagArgument(kTerrainNameFlagLong, 0, terrainName);
+	}
+	if (parser.isFlagSet(kTerrainWidthFlag))
+	{
+		stat = parser.getFlagArgument(kTerrainWidthFlag, 0, terrainWidth);
+	} else if (parser.isFlagSet(kTerrainWidthFlagLong)) 
+	{
+		stat = parser.getFlagArgument(kTerrainWidthFlagLong, 0, terrainWidth);
+	}
+	if (parser.isFlagSet(kTerrainHeightFlag))
+	{
+		stat = parser.getFlagArgument(kTerrainHeightFlag, 0, terrainHeight);
+	} else if (parser.isFlagSet(kTerrainHeightFlagLong))
+	{
+		stat = parser.getFlagArgument(kTerrainHeightFlagLong, 0, terrainHeight);
+	}	
+	if (parser.isFlagSet(kTerrainSubdivisionWidthFlag))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kTerrainSubdivisionWidthFlag, 0, temp);
+		terrainSubWidth = (int) temp;
+	} else if (parser.isFlagSet(kTerrainSubdivisionWidthFlagLong))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kTerrainSubdivisionWidthFlagLong, 0, temp);
+		terrainSubWidth = (int) temp;
+	}
+	if (parser.isFlagSet(kTerrainSubdivisionHeightFlag))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kTerrainSubdivisionHeightFlag, 0, temp);
+		terrainSubHeight = (int)temp;
+	} else if (parser.isFlagSet(kTerrainSubdivisionHeightFlagLong))
+	{
+		int temp;
+		stat = parser.getFlagArgument(kTerrainSubdivisionHeightFlagLong, 0, temp);
+		terrainSubHeight = (int)temp;
 	}
 	return stat;
 }
@@ -183,6 +265,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// parse files
 	MString name("");
+
+	// Selection region stuff
 	SelectionType seltype = SelectionType::NONE;
 	double width = 0; // only in one direction, so the true width is twice as long
 	double height = 0; // only in one direction, so the true height is twice as long
@@ -190,13 +274,34 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec3 minBound;
 	vec3 maxBound;
 	int paletteIdx;
+	bool isSelRegionMoving = false; // did we move the selection region? (this is for updating region heights)
+
 	std::vector<int> priOrder;
 	bool isGenerating = false; // is the passed in area for generating?
-	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, paletteIdx, priOrder, isGenerating); // get all the arguments
+
+	// Terrain stuff
+	MString terrainName("");
+	double terrainWidth = 0;
+	double terrainHeight = 0;
+	int terrainSubWidth = 0;
+	int terrainSubHeight = 0;
+	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
+				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
+				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight); // get all the arguments
 
 	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
+	}
+
+	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
+		// Initialize terrain
+		terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
+	}
+
+	if (isSelRegionMoving) {
+		// Update selection region
+		terrain.updateSelectionRegion();
 	}
 
 	// checking arguments
@@ -257,13 +362,19 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MString w_palette_path = wsp_path + MString("/WorldPalette");
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "\"");
 
-	// Copy the obj, mtl and icon files
+	// Copy the scene obj and mtl files
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/objects\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/tree.obj\" " + "\"" + loadPath + "/scene_objects/tree.obj\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/tree.mtl\" " + "\"" + loadPath + "/scene_objects/tree.mtl\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.obj\" " + "\"" + loadPath + "/scene_objects/big_rock.obj\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.mtl\" " + "\"" + loadPath + "/scene_objects/big_rock.mtl\"");
 
+	// Copy the terrain files
+	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/terrains\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/terrains/terrain.obj\" " + "\"" + loadPath + "/scene_objects/terrain.obj\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/terrains/terrain.mtl\" " + "\"" + loadPath + "/scene_objects/terrain.mtl\"");
+
+	// Copy the icon files
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/icons\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/tree.png\" " + "\"" + loadPath + "/icons/tree.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/big_rock.png\" " + "\"" + loadPath + "/icons/big_rock.png\"");

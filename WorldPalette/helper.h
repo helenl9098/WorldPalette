@@ -12,6 +12,8 @@
 
 void printFloat(MString caption, float f);
 
+void printVec2(MString caption, vec2 v);
+
 void printVec3(MString caption, vec3 v);
 
 void printString(MString caption, MString s);
