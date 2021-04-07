@@ -2,6 +2,7 @@
 #ifndef WORLDPALETTE_H
 #define WORLDPALETTE_H
 #include "Distribution.h"
+#include "Terrain.h"
 #include <maya/MGlobal.h>
 #include "helper.h"
 /*
@@ -44,7 +45,9 @@ public:
 
 	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
 
+	// Static variables
 	static std::vector<CATEGORY> priorityOrder; // priority order - items in the beginning are prioritized
+	static Terrain terrain; // World terrain
 
 	~WorldPalette();
 };

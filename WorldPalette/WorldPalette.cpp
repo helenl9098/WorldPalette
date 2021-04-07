@@ -1,6 +1,7 @@
 #include "WorldPalette.h"
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
+Terrain WorldPalette::terrain = Terrain(); // default initialization
 
 WorldPalette::WorldPalette() {
 	printString(MString("Created World Palette Object"), MString(""));
@@ -84,12 +85,15 @@ void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound,
                 // We want only the shape, not the transform-extended-to-shape.
                 MString name = dagPath.partialPathName();
 
-                // 1. ignore the selection region or the mesh objs
+                // 1. ignore the selection region, mesh objs and the terrain
                 bool objectInRegion = false;
                 if (name == MString("selectionRegion")) {
                     continue;
                 }
                 if (name == MString("tree:Tree") || name == MString("big_rock:Rock")) {
+                    continue;
+                }
+                if (name == WorldPalette::terrain.name) {
                     continue;
                 }
 
@@ -532,6 +536,14 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 	for (SceneObject geom : geomToPaste) {
 		// Get the world position of the geometry
 		vec3 wpos = geom.position + pos;
+        // Find the height of the geometry
+        float height = 0.f;
+        int triIdx = 0;
+        vec2 coords;
+        int res = WorldPalette::terrain.findHeight(height, triIdx, coords, wpos);
+        if (res) {
+            wpos[1] = height;
+        }
         std::string com = ","; // comma
         // The first parameter I'm passing below (1) is the type index (0: rock, 1: tree)
         MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(1,") + std::to_string(wpos[0]) + com + std::to_string(wpos[1]) + com + std::to_string(wpos[2]) + std::string(")")).c_str());

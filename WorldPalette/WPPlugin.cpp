@@ -273,7 +273,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec3 center;
 	vec3 minBound;
 	vec3 maxBound;
-	int paletteIdx;
+	int paletteIdx = -1;
 	bool isSelRegionMoving = false; // did we move the selection region? (this is for updating region heights)
 
 	std::vector<int> priOrder;
@@ -296,12 +296,12 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
-		terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
+		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
 	}
 
 	if (isSelRegionMoving) {
 		// Update selection region
-		terrain.updateSelectionRegion();
+		WorldPalette::terrain.updateSelectionRegion();
 	}
 
 	// checking arguments
@@ -334,11 +334,6 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 		}
 	}
-
-	//MString caption("Processed Selection!");
-	//MString order((std::string("1st: ") + std::to_string((int)WorldPalette::priorityOrder[0]) + std::string(" 2nd: ") + std::to_string((int)WorldPalette::priorityOrder[1]) + std::string(" 3rd: ") + std::to_string((int)WorldPalette::priorityOrder[2])).c_str());
-	//MString messageBoxCommand = ("confirmDialog -title \"" + caption + "\" -message \"" + order + "\" -button \"Ok\" -defaultButton \"Ok\"");
-	//MGlobal::executeCommand(messageBoxCommand);
 	return status;
 }
 

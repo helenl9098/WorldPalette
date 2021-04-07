@@ -77,6 +77,7 @@ global proc makePlanarSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
+    global int $isTerrainLoaded;
     int $res = 20; // plane resolution
     if ($selectionType != 1) {
         // Create a 2-D selection bound from a plane
@@ -89,8 +90,10 @@ global proc makePlanarSelectRegion()
         // Add the plane to selectionLayer
         layerEditorAddObjects $selectionLayer;
         
-        // Map region vertices to terrain height
-        WorldPalette -msr true;
+        // Map region vertices to terrain height (if there is terrain)
+        if ($isTerrainLoaded) {
+            WorldPalette -msr true;
+        }
         
         select -cl  ; // deselect
     }
@@ -102,6 +105,7 @@ global proc makeRadialSelectRegion()
     global string $selectionRegion[];
     global int $selectionType;
     global string $selectionLayer;
+    global int $isTerrainLoaded;
     int $res = 20; // disk resolution
     if ($selectionType != 2) {
         // Create a 2-D selection bound from a disc
@@ -113,8 +117,10 @@ global proc makeRadialSelectRegion()
         // Add the disc to selectionLayer
         layerEditorAddObjects $selectionLayer;
         
-        // Map region vertices to terrain height
-        WorldPalette -msr true;
+        // Map region vertices to terrain height (if there is terrain)
+        if ($isTerrainLoaded) {
+            WorldPalette -msr true;
+        }
         
         select -cl  ; // deselect
     }
@@ -135,6 +141,7 @@ global proc moveAlongAxis(float $val, int $axis)
 {
     global string $selectionRegion[];
     global int $selectionType;
+    global int $isTerrainLoaded;
     if ($selectionType) {
         select -r $selectionRegion[0];
         if ($axis == 0) {
@@ -146,8 +153,10 @@ global proc moveAlongAxis(float $val, int $axis)
         }
         select -cl  ; // deselect
         
-        // Map region vertices to terrain height
-        WorldPalette -msr true;
+        // Map region vertices to terrain height (if there is terrain)
+        if ($isTerrainLoaded) {
+            WorldPalette -msr true;
+        }
     }
 }
 
@@ -296,6 +305,7 @@ global proc updatePalette()
 
 global proc loadDefaultScene()
 {
+    global int $numTerrainLoads;
     // Delete all geometry in the scene first
     string $objects[] = `listTransforms -geometry`;
     for ($geom in $objects) {
@@ -303,6 +313,9 @@ global proc loadDefaultScene()
             continue;
         }
         if ($geom == "tree:Tree" || $geom == "big_rock:Rock") {
+            continue;
+        }
+        if ($geom == ("terrain" + $numTerrainLoads + ":pPlane1") || $geom == "terrain:pPlane1") {
             continue;
         }
         delete $geom;
@@ -400,6 +413,7 @@ global proc loadTerrain()
 {
     global int $isTerrainLoaded;
     global int $numTerrainLoads;
+    global int $selectionType;
     if ($isTerrainLoaded) {
         // There is already a terrain - user must delete it first
         confirmDialog -t "Load Terrain" -m "There already exists a terrain. You must delete this existing terrain first." -b "OK" -icn "warning";
@@ -416,6 +430,10 @@ global proc loadTerrain()
             WorldPalette -tn "terrain:pPlane1" -tw 50 -th 50 -tsw 100 -tsh 100;
         }
         $isTerrainLoaded = true;
+        // Map selection region vertices to terrain height (if there is selection region)
+        if ($selectionType) {
+            WorldPalette -msr true;
+        }
     }
 }
 
@@ -423,6 +441,7 @@ global proc deleteTerrain()
 {
     global int $isTerrainLoaded;
     global int $numTerrainLoads;
+    global int $selectionType;
     if ($isTerrainLoaded) {
         if ($numTerrainLoads) {
             select -r ("terrain" + ($numTerrainLoads) + ":pPlane1");
@@ -431,6 +450,15 @@ global proc deleteTerrain()
         }
         delete;
         $isTerrainLoaded = false;
+        // Map selection region vertices to zero height (if there is selection region)
+        if ($selectionType) {
+            int $count[] = `polyEvaluate -v "selectionRegion"`;
+            for ($idx = 0; $idx < $count[0]; $idx++) {
+                select -r selectionRegion.vtx[$idx];
+                move -y 0;
+            }
+            select -cl;
+        }
     } else {
         // There isn't a terrain to delete
         confirmDialog -t "Delete Terrain" -m "There is no terrain." -b "OK" -icn "warning";

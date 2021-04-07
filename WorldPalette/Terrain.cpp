@@ -21,7 +21,7 @@ double Terrain::distance2D(vec2 p0, vec2 p1)
 	return dist;
 }
 
-Terrain::Terrain() : width(0), height(0), sub_width(0), sub_height(0)
+Terrain::Terrain() : name(MString("")), width(0), height(0), sub_width(0), sub_height(0)
 {
 
 }
@@ -115,7 +115,7 @@ vec3 Terrain::findSurfaceNormalAtPoint(vec3 pos)
 		// Get the tile coordinates
 		TerrainTile tile = tileMap[coords[0]][coords[1]];
 		// Compute the surface normal for the 3 triangles formed by barycentric coordinates
-		vec3 posOnTile = vec3(pos[0], height - OFFSET, pos[2]); // We don't want to use the offset here
+		vec3 posOnTile = vec3(pos[0], height, pos[2]);
 		if (triangle == 1) {
 			// Compute from v1, v2, v3
 			vec3 n1 = ((posOnTile - tile.v1).Cross(posOnTile - tile.v2)).Normalize();
@@ -145,6 +145,13 @@ vec3 Terrain::findSurfaceNormalAtPoint(vec3 pos)
 
 int Terrain::findHeight(float& height, int& triIdx, vec2& coords, vec3 pos)
 {
+	// Input breakdown:
+	// height: Height to set the pos[1] to
+	// triIdx: We split each tile into two triangles, the triIdx indicates which triangle pos falls within. If things go right this will be set to either 1 or 2
+	// coords: 2D coordinanes of the tile that overlaps with given pos (coordinates are in tileMap indices, not world coordinates!)
+	// pos: Position we're tring to find the height for
+
+
 	// Get the tile coordinates
 	coords = findOverlappingTile(pos);
 	if (coords[0] == -1) {
@@ -160,22 +167,22 @@ int Terrain::findHeight(float& height, int& triIdx, vec2& coords, vec3 pos)
 	// If the point is exactly on a tile point simply get the height
 	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v1[0], tile.v1[2])) < THRESHOLD) {
 		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v1[1] + OFFSET;
+		height = tile.v1[1];
 		return 1;
 	}
 	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v2[0], tile.v2[2])) < THRESHOLD) {
 		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v2[1] + OFFSET;
+		height = tile.v2[1];
 		return 1;
 	}
 	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v3[0], tile.v3[2])) < THRESHOLD) {
 		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v3[1] + OFFSET;
+		height = tile.v3[1];
 		return 1;
 	}
 	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v4[0], tile.v4[2])) < THRESHOLD) {
 		triIdx = 2; // Intersection found with 2nd triangle
-		height = tile.v4[1] + OFFSET;
+		height = tile.v4[1];
 		return 1;
 	}
 
@@ -193,7 +200,7 @@ int Terrain::findHeight(float& height, int& triIdx, vec2& coords, vec3 pos)
 		// Find missing variable in equation
 		float d = -cp[0] * tile.v1[0] - cp[1] * tile.v1[1] - cp[2] * tile.v1[2];
 		// Solve equation for y
-		height = ((-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1]) + OFFSET;
+		height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
 		return 1;
 	}
 	else {
@@ -209,7 +216,7 @@ int Terrain::findHeight(float& height, int& triIdx, vec2& coords, vec3 pos)
 			// Find missing variable in equation
 			float d = -cp[0] * tile.v3[0] - cp[1] * tile.v3[1] - cp[2] * tile.v3[2];
 			// Solve equation for y
-			height = ((-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1]) + OFFSET;
+			height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
 			return 1;
 		}
 		else {
@@ -248,6 +255,7 @@ void Terrain::updateSelectionRegion()
 		//printVec2(MString("Point: "), vec2(posArr[0], posArr[2]));
 		//printVec3(MString("Surface normal: "), norm);
 		if (res) {
+			height += OFFSET; // Add offset to avoid z-buffer artifacts
 			MGlobal::executeCommand((std::string("select -r selectionRegion.vtx[") + std::to_string(i) + std::string("]")).c_str());
 			MGlobal::executeCommand((std::string("move -y ") + std::to_string(height)).c_str());
 			MGlobal::executeCommand("select -cl");

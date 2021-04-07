@@ -6,12 +6,10 @@
 #include <maya/MGlobal.h>
 #include <maya/MPxCommand.h>
 #include "Distribution.h"
-#include "Terrain.h"
 #include "WorldPalette.h"
 #include "helper.h"
 
 WorldPalette worldPalette;
-Terrain terrain;
 
 // custom Maya command
 class WPPlugin : public MPxCommand
