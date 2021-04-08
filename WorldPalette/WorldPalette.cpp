@@ -180,91 +180,6 @@ int WorldPalette::findIndexGivenCategory(CATEGORY c) {
     return index;
 }
 
-/*
-float findFXGivenCategory(std::map<CATEGORY, std::vector<SceneObject>>& orderedSceneObjects, int currentCategoryIndex, float increment, Distribution d) {
-    float currentCatgeoryFX = 1.0;
-    CATEGORY currentCategory = WorldPalette::priorityOrder[currentCategoryIndex];
-    for (int y = 0; y < currentCategoryIndex + 1; y++) {
-        CATEGORY dependentCategory = WorldPalette::priorityOrder[y];
-
-        if (orderedSceneObjects.find(currentCategory) == orderedSceneObjects.end() ||
-            orderedSceneObjects.find(dependentCategory) == orderedSceneObjects.end()) {
-#if DEBUG
-            printString(MString("*** Nothing to compare to"), MString(""));
-#endif
-        }
-        else {
-#if DEBUG
-            printString(MString("****************************************************************"), MString(""));
-            printFloat(MString("Current Category We are Looking At: "), static_cast<std::underlying_type<CATEGORY>::type>(currentCategory));
-            printFloat(MString("Dependent Category We are Looking At: "), static_cast<std::underlying_type<CATEGORY>::type>(dependentCategory));
-#endif
-            // for each object of the current category, calculate how objects of the dependent category is positioned around it
-            for (SceneObject& currentObject : orderedSceneObjects.at(currentCategory)) {
-                for (SceneObject& dependentObject : orderedSceneObjects.at(dependentCategory)) {
-                    if (dependentObject.name != currentObject.name) {
-                        float distanceToCurrent = Distance(dependentObject.position, currentObject.position);
-                        int index = floor(distanceToCurrent / increment);
-
-                        if (index < 0 || index >= NUM_BUCKETS) {
-#if DEBUG
-                            printFloat(MString("*** Distance To Center"), distanceToCurrent);
-                            printFloat(MString("***Error: WRONG Index"), index);
-#endif
-                        }
-                        else {
-                            float histVal = d.histograms[currentCategoryIndex][y].second[index];
-                            currentCatgeoryFX *= histVal;
-
-#if DEBUG
-                            printString(MString("This is the fx for this pair:"), MString(""));
-                            printFloat(MString("FX: "), histVal);
-                            printFloat(MString("FX Product: "), currentCatgeoryFX);
-#endif
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-#if DEBUG
-    printString(MString("============================================================="), MString(""));
-    printFloat(MString("Current Category We are Looking At: "), static_cast<std::underlying_type<CATEGORY>::type>(currentCategory));
-    printFloat(MString("FX: "), currentCatgeoryFX);
-#endif
-
-    return currentCatgeoryFX;
-}
-
-std::vector<float> WorldPalette::calculateExampleFX(Distribution d) {
-#if DEBUG
-    printString(MString("****************************************************************"), MString(""));
-    printString(MString("Calculating FX for example histogram"), MString(""));
-#endif
-
-    float increment = d.getHistogramIncrement();
-    std::vector<float> fxResults; // contains the fx for every category
-    for (int x = 0; x < WorldPalette::priorityOrder.size(); x++) {
-        fxResults.push_back(findFXGivenCategory(d.sceneObjects, x, increment, d));
-    }
-    return fxResults;
-}
-
-float WorldPalette::calculateFX(Distribution d, CATEGORY current) {
-#if DEBUG
-    printString(MString("****************************************************************"), MString(""));
-    printString(MString("Calculating FX for iteration histogram"), MString(""));
-#endif
-
-    float increment = d.getHistogramIncrement();
-    CATEGORY currentCategory = current;
-    int x = this->findIndexGivenCategory(current);
-    return findFXGivenCategory(d.sceneObjects, x, increment, d);
-}
-*/
-
 vec3 getRandPosInRegion(SelectionType st, float w, float h, vec3 pos) {
     if (st == SelectionType::PLANAR) {
         float randW = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (w * 2.0f))) - w;
@@ -294,6 +209,11 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
     // 3. Initialize a random distribution depending on the density of the currently selected sample
     float buffer = 1.0; // we don't want to generate meshes right at the edge
+
+    // example density
+    float exampleDensity = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
+
+    // TO DO: FIND THE DENSITY OF EVERY CATEGORY
     float density = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
     int numElements = ceil(density * pasteRegion.getArea());
 #if DEBUG
@@ -304,6 +224,9 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
         printString(MString("Error: "), MString("< 1 num elements in new area"));
         return result;
     }
+
+    // TO DO: GENERATE OBJECTS OF EVERY EXISTING CATEGORY BASED ON DENSITY
+    // TO DO: MAKE TABLE THAT MATCHES CATEGORIES WITH LAYER WITH DATATYPE
     for (int i = 0; i < numElements; i++) {
         // make a random position in the region's bound
         vec3 randLocalPos = getRandPosInRegion(st, w - buffer, h - buffer, pos);
@@ -315,16 +238,22 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     //std::vector<float> exampleFX = calculateExampleFX(this->currentlySelectedRegion);
 
     // 5. Go through a fixed number of iterations
-    // example density
-    float exampleDensity = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
+    pasteRegion.objects = result; // HELEN: CHANGED
+    Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
+
     for (int i = 0; i < NUM_ITERS; i++) {
         
-        pasteRegion.objects = result;
-        Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width);
+        //pasteRegion.objects = result;
+        //Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
 
         // 6. For each iteration, decide whether element birth or death
         float probability = rand() % 100;
         if (probability < 50) {
+
+            if (result.size() + 1 > numElements + ELEMENT_BUFFER) { // HELEN: CHANGED
+                continue; 
+            }
+
             // Element Birth
             // --- a) add element at random location
             vec3 randLocation = getRandPosInRegion(st, w - buffer, h - buffer, pos);
@@ -337,11 +266,6 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             // --- c) generate new histogram with this new element
             pasteRegion.objects = result;
             Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
-
-            // --- d) calculate acceptance rate based on example histogram
-            //float FXP = calculateFX(tmpDist, assignedCategory);
-            //float FX = exampleFX[findIndexGivenCategory(assignedCategory)];
-            //float acceptanceRate = (FXP / FX) * (pasteRegion.getArea() / result.size());
 
             // TO DO: only comparing HOUSE vs HOUSE right now
             float oldRatio = 0;
@@ -379,6 +303,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                     float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                     if (probability2 < exampleDensity / currentDensity) {
                         //printString(MString("(BIRTH ACCEPTED): "), MString(""));
+                        oldDist = tmpDist;
                         continue;
                     }
                     else {
@@ -389,32 +314,17 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 }
                 else {
                     //printString(MString("(BIRTH ACCEPTED): "), MString(""));
+                    oldDist = tmpDist;
                     continue;
                 }
             }
-
-            /*
-            // --- e) accept or deny the birth
-            if (acceptanceRate > 1) {
-                // we accept the new scene object
-                printString(MString("(BIRTH ACCEPTED) >1: "), MString(""));
-                continue;
-            }
-            else {
-                float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                if (probability2 < acceptanceRate) {
-                    // we accept the new scene object
-                    printString(MString("(BIRTH ACCEPTED) <1: "), MString(""));
-                    continue;
-                }
-                else {
-                    // we do not accep the new scene object
-                    printString(MString("(BIRTH DENIED) <1: "), MString(""));
-                    result.pop_back();
-                }
-            } */
         }
         else {
+
+            if (result.size() - 1 < numElements - ELEMENT_BUFFER) { // HELEN: CHANGED
+                continue;
+            }
+
             // Element Death
             // --- a) select a random index to delete
             int randIndex = rand() % result.size();
@@ -426,11 +336,6 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             // --- c) generate new histogram with this new element removed
             pasteRegion.objects = result;
             Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
-
-            // --- d) calculate acceptance rate based on example histogram 
-            //float FXP = calculateFX(tmpDist, tmpObj.category);
-            //float FX = exampleFX[findIndexGivenCategory(tmpObj.category)];
-            //float acceptanceRate = (FX / FXP) * (result.size() / pasteRegion.getArea());
 
             // TO DO: only comparing HOUSE vs HOUSE right now
             float oldRatio = 0;
@@ -467,6 +372,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                     float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                     if (probability2 < currentDensity / exampleDensity) {
                         //printString(MString("(DEATH ACCEPTED): "), MString(""));
+                        oldDist = tmpDist;
                         continue;
                     }
                     else {
@@ -477,30 +383,11 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 }
                 else {
                     //printString(MString("(DEATH ACCEPTED): "), MString(""));
+                    oldDist = tmpDist;
                     continue;
                 }
             }
 
-            /*
-            // --- e) accept or deny the death
-            if (acceptanceRate > 1) {
-                // we accept the new scene object
-                printString(MString("(DEATH ACCEPTED) >1: "), MString(""));
-                continue;
-            }
-            else {
-                float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                if (probability2 < acceptanceRate) {
-                    // we accept the new scene object
-                    printString(MString("(DEATH ACCEPTED) <1: "), MString(""));
-                    continue;
-                }
-                else {
-                    // we do not accep the new scene object
-                    printString(MString("(DEATH DENIED) <1: "), MString(""));
-                    result.push_back(tmpObj);
-                }
-            } */
         }
     
     }

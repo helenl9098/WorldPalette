@@ -1,24 +1,7 @@
-﻿  Terrain.cpp
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(7,96): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(8,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(9,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(10,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(116,38): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(116,49): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(165,37): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(165,48): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(170,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(175,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(180,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(185,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(201,11): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(203,51): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(217,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\WorldPalette\Terrain.cpp(219,52): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-     Creating library C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.lib and object C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.exp
+﻿     Creating library C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.lib and object C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.exp
   Generating code
-  1 of 937 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    3 functions had inline decision re-evaluated but remain unchanged
+  Previous IPDB not found, fall back to full compilation.
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(18): warning C4715: 'SelectedRegion::getArea': not all control paths return a value
+  All 937 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
-  WorldPalette.vcxproj -> C:\Users\Rafael\Documents\Gizem\CIS-660\WorldPalette\x64\Release\WorldPalette.mll
+  WorldPalette.vcxproj -> C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.mll

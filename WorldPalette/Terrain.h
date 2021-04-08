@@ -6,6 +6,7 @@
 #include <map>
 #include <maya/MObject.h>
 #include <maya/MGlobal.h>
+#include <string>
 
 #define OFFSET 0.5
 #define THRESHOLD 1e-3
