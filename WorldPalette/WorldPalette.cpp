@@ -1,4 +1,5 @@
 #include "WorldPalette.h"
+#include <algorithm>
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
@@ -198,6 +199,36 @@ vec3 getRandPosInRegion(SelectionType st, float w, float h, vec3 pos) {
     return vec3(0, 0, 0);
 }
 
+float WorldPalette::calculateRatio(Distribution& tmpDist) {
+    /*for (int x = 0; x < NUM_BUCKETS; x++) {
+        if (this->currentlySelectedRegion.histograms[0][0].second[x] == 0) {
+            oldRatio += oldDist.histograms[0][0].second[x];
+            newRatio += tmpDist.histograms[0][0].second[x];
+        }
+        else {
+            if (oldDist.histograms[0][0].second[x] != 0) {
+                oldRatio += oldDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
+            }
+            if (tmpDist.histograms[0][0].second[x] != 0) {
+                newRatio += tmpDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
+            }
+        }
+    }*/
+    
+    float newRatio = 0;
+    for (int x = 0; x < NUM_BUCKETS; x++) {
+        if (this->currentlySelectedRegion.histograms[0][0].second[x] <= 0.2) {
+            if (tmpDist.histograms[0][0].second[x] > 0.2) {
+                newRatio += tmpDist.histograms[0][0].second[x] * 20.0;
+            }
+        }
+        else {
+            newRatio += abs(this->currentlySelectedRegion.histograms[0][0].second[x] - tmpDist.histograms[0][0].second[x]);
+        }
+    }
+    return newRatio;
+}
+
 std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos) {
 
     // 1. Create a empty selected region that will represent our area to paste into
@@ -215,7 +246,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
     // TO DO: FIND THE DENSITY OF EVERY CATEGORY
     float density = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-    int numElements = ceil(density * pasteRegion.getArea());
+    int numElements = std::max(5.0f, ceil(density * pasteRegion.getArea()));
 #if DEBUG
     printFloat(MString("Density: "), density);
     printFloat(MString("Original NumElements in Paste Area: "), numElements);
@@ -234,25 +265,16 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
         result.push_back(SceneObject(LAYER::VEGETATION, CATEGORY::HOUSE, DATATYPE::DISTRIBUTION, randLocalPos, name));
     }
 
-    // 4. calculate the example histogram f(x) 
-    //std::vector<float> exampleFX = calculateExampleFX(this->currentlySelectedRegion);
-
     // 5. Go through a fixed number of iterations
-    pasteRegion.objects = result; // HELEN: CHANGED
+    pasteRegion.objects = result;
     Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
+    float oldRatio = calculateRatio(oldDist);
 
     for (int i = 0; i < NUM_ITERS; i++) {
-        
-        //pasteRegion.objects = result;
-        //Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
 
         // 6. For each iteration, decide whether element birth or death
         float probability = rand() % 100;
         if (probability < 50) {
-
-            if (result.size() + 1 > numElements + ELEMENT_BUFFER) { // HELEN: CHANGED
-                continue; 
-            }
 
             // Element Birth
             // --- a) add element at random location
@@ -266,131 +288,58 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             // --- c) generate new histogram with this new element
             pasteRegion.objects = result;
             Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
-
-            // TO DO: only comparing HOUSE vs HOUSE right now
-            float oldRatio = 0;
-            float newRatio = 0;
-            for (int x = 0; x < NUM_BUCKETS; x++) {
-                if (this->currentlySelectedRegion.histograms[0][0].second[x] == 0) {
-                    oldRatio += oldDist.histograms[0][0].second[x];
-                    newRatio += tmpDist.histograms[0][0].second[x];
-                }
-                else {
-                    if (oldDist.histograms[0][0].second[x] != 0) {
-                        oldRatio += oldDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-                    }
-                    if (tmpDist.histograms[0][0].second[x] != 0) {
-                        newRatio += tmpDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-                    }
-                }
-            }
-            
+            float newRatio = calculateRatio(tmpDist);
 #if DEBUG
             printFloat(MString("Current Iteration: "), i);
             //printFloat(MString("(BIRTH) Acceptance Rate: "), acceptanceRate);
             printFloat(MString("(BIRTH) Old Ratio: "), oldRatio);
             printFloat(MString("(BIRTH) New Ratio: "), newRatio);
 #endif
-            if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() > numElements + ELEMENT_BUFFER) {
-                // we do not accep the new scene object
-                //printString(MString("(BIRTH DENIED): "), MString(""));
+            //if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() > numElements + ELEMENT_BUFFER) {
+            if (oldRatio < newRatio || result.size() > numElements + floor(numElements * 0.2)) {
+                // we do not accept the new scene object
                 result.pop_back();
             }
             else {
                 // we accept the new scene object
-                float currentDensity = result.size() / pasteRegion.getArea();
-                if (exampleDensity / currentDensity < 1) {
-                    float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                    if (probability2 < exampleDensity / currentDensity) {
-                        //printString(MString("(BIRTH ACCEPTED): "), MString(""));
-                        oldDist = tmpDist;
-                        continue;
-                    }
-                    else {
-                        // we do not accep the new scene object
-                        //printString(MString("(BIRTH DENIED): "), MString(""));
-                        result.pop_back();
-                    }
-                }
-                else {
-                    //printString(MString("(BIRTH ACCEPTED): "), MString(""));
-                    oldDist = tmpDist;
-                    continue;
-                }
+                oldRatio = newRatio;
+                continue;
             }
         }
         else {
+                // Element Death
+                // --- a) select a random index to delete
+                int randIndex = rand() % result.size();
 
-            if (result.size() - 1 < numElements - ELEMENT_BUFFER) { // HELEN: CHANGED
-                continue;
-            }
+                // --- b) delete element (save tmp copy in case death is denied)
+                SceneObject tmpObj = result[randIndex];
+                result.erase(result.begin() + randIndex);
 
-            // Element Death
-            // --- a) select a random index to delete
-            int randIndex = rand() % result.size();
-
-            // --- b) delete element (save tmp copy in case death is denied)
-            SceneObject tmpObj = result[randIndex];
-            result.erase(result.begin() + randIndex);
-
-            // --- c) generate new histogram with this new element removed
-            pasteRegion.objects = result;
-            Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
-
-            // TO DO: only comparing HOUSE vs HOUSE right now
-            float oldRatio = 0;
-            float newRatio = 0;
-            for (int x = 0; x < NUM_BUCKETS; x++) {
-                if (this->currentlySelectedRegion.histograms[0][0].second[x] == 0) {
-                    oldRatio += oldDist.histograms[0][0].second[x];
-                    newRatio += tmpDist.histograms[0][0].second[x];
-                }
-                else {
-                    if (oldDist.histograms[0][0].second[x] != 0) {
-                        oldRatio += oldDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-                    }
-                    if (tmpDist.histograms[0][0].second[x] != 0) {
-                        newRatio += tmpDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-                    }
-                }
-            }
+                // --- c) generate new histogram with this new element removed
+                pasteRegion.objects = result;
+                Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
+                float newRatio = calculateRatio(tmpDist);
 #if DEBUG
-            printFloat(MString("Current Iteration: "), i);
-            //printFloat(MString("(DEATH) Acceptance Rate: "), acceptanceRate);
-            printFloat(MString("(DEATH) Old Ratio: "), oldRatio);
-            printFloat(MString("(DEATH) New Ratio: "), newRatio);
+                printFloat(MString("Current Iteration: "), i);
+                //printFloat(MString("(DEATH) Acceptance Rate: "), acceptanceRate);
+                printFloat(MString("(DEATH) Old Ratio: "), oldRatio);
+                printFloat(MString("(DEATH) New Ratio: "), newRatio);
 #endif
-            if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() < numElements - ELEMENT_BUFFER) {
-                // we do not accept the death
-                //printString(MString("(DEATH DENIED): "), MString(""));
-                result.push_back(tmpObj);
-            }
-            else {
-                // we accept the death
-                float currentDensity = result.size() / pasteRegion.getArea();
-                if (currentDensity / exampleDensity < 1) {
-                    float probability2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                    if (probability2 < currentDensity / exampleDensity) {
-                        //printString(MString("(DEATH ACCEPTED): "), MString(""));
-                        oldDist = tmpDist;
-                        continue;
-                    }
-                    else {
-                        // we do not accep the new scene object
-                        //printString(MString("(DEATH DENIED): "), MString(""));
-                        result.push_back(tmpObj);
-                    }
+                //if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() < numElements - ELEMENT_BUFFER) {
+                if (oldRatio < newRatio || result.size() < numElements - floor(numElements * 0.2)) {
+                    // we do not accept the death
+                    result.push_back(tmpObj);
                 }
                 else {
-                    //printString(MString("(DEATH ACCEPTED): "), MString(""));
-                    oldDist = tmpDist;
+                    // we accept the death
+                    oldRatio = newRatio;
                     continue;
                 }
-            }
-
         }
     
     }
+
+    printFloat(MString("Final: "), oldRatio);
 
     return result;
 }

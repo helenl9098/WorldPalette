@@ -34,10 +34,7 @@ public:
 
 	int findIndexGivenCategory(CATEGORY c);
 
-	// TO DO: See if we need these
-	//std::vector<float> calculateExampleFX(Distribution d);
-	//float calculateFX(Distribution d, CATEGORY current);
-
+	float calculateRatio(Distribution& tmpDist);
 	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
 	
 	// TO DO: add future editing operations here

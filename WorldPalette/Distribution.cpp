@@ -17,6 +17,24 @@ float SelectedRegion::getArea() {
 	}
 }
 
+DATATYPE getType(CATEGORY c) {
+    if (c == CATEGORY::ROCK || c == CATEGORY::TREE || c == CATEGORY::HOUSE) {
+        return DATATYPE::DISTRIBUTION;
+    }
+    else {
+        return DATATYPE::GRAPH;
+    }
+}
+
+LAYER getLayer(CATEGORY c) {
+    if (c == CATEGORY::ROCK || c == CATEGORY::TREE) {
+        return LAYER::VEGETATION;
+    }
+    else {
+        return LAYER::SETTLEMENT;
+    }
+}
+
 /*
 * Goes through all the scene objects and finds the ones that are currently in the selected region
 * Looked at : https://download.autodesk.com/us/maya/2010help/api/obj_export_8cpp-example.html
@@ -228,7 +246,7 @@ float Distribution::getHistogramIncrement(float radius) {
     }
     else if (this->selectedRegion.selectionType == SelectionType::RADIAL) {
         //increment = (this->selectedRegion.radius * 2.0) / NUM_BUCKETS;
-        increment = radius / NUM_BUCKETS;
+        increment = (radius * 1.5) / NUM_BUCKETS;
     }
     return increment;
 }
