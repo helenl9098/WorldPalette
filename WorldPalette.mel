@@ -324,9 +324,17 @@ global proc loadDefaultScene()
     // Create a bunch of scene objects
     int $numPrims = 8;
     for ($i = 0; $i < $numPrims; $i++) {
-        int $t = 1;//`rand 0 2`;
+        int $t = 1;// trees
         float $rx = `rand -1 1`;
         float $rz = `rand -1 1`;
+        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+    }
+    
+    int $numPrims2 = 40;
+    for ($i = 0; $i < $numPrims2; $i++) {
+        int $t = 0;//`rocks
+        float $rx = `rand -5 5`;
+        float $rz = `rand -5 5`;
         addSceneGeometryAtLoc($t, $rx, 0, $rz);
     }
 }
@@ -373,6 +381,7 @@ global proc addSceneGeom(int $type)
             showHidden big_rock:Rock;
             select -r big_rock:Rock;
             duplicate -rr;
+            scale -x 0.5 -y 0.5 -z 0.5;
             hide big_rock:Rock;
             break;
         case 1:

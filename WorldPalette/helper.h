@@ -7,7 +7,7 @@
 // used for DEBUG print statements
 #define DEBUG false
 #define NUM_BUCKETS 10
-#define NUM_ITERS 600
+#define NUM_ITERS 1000
 #define ELEMENT_BUFFER 8
 
 void printFloat(MString caption, float f);

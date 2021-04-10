@@ -40,8 +40,6 @@ LAYER getLayer(CATEGORY c) {
 * Looked at : https://download.autodesk.com/us/maya/2010help/api/obj_export_8cpp-example.html
 */
 void SelectedRegion::addSceneObjectsToVector() {
-	printString(MString("Adding Scene Objects to Vector.."), MString(""));
-
 	MStatus stat;
 
 	// Get all of the sets in maya and put them into
@@ -160,10 +158,19 @@ void SelectedRegion::addSceneObjectsToVector() {
                         SceneObject obj{};
                         obj.position = vec3(trans[0], trans[1], trans[2]) - this->position;
 
-                        // TO DO: CHANGE DATA TYPES LATER
-                        obj.layer = LAYER::VEGETATION;
-                        obj.datatype = DATATYPE::DISTRIBUTION;
-                        obj.category = CATEGORY::HOUSE;
+                        // TO DO: ADD MORE IF MORE CATEGORIES
+                        std::string objectName = name.asChar();
+                        if (objectName.find("Tree") != std::string::npos) {
+                            obj.category = CATEGORY::TREE;
+                        }
+                        else if (objectName.find("Rock") != std::string::npos) {
+                            obj.category = CATEGORY::ROCK;
+                        }
+                        else {
+                            obj.category = CATEGORY::HOUSE;
+                        }
+                        obj.layer = getLayer(obj.category);
+                        obj.datatype = getType(obj.category);
                         obj.name = name;
 
                         // 6. push scene object back in vector
@@ -284,13 +291,7 @@ void Distribution::radialDistribution(std::map<CATEGORY, std::vector<SceneObject
                 float distanceToCurrent= Distance(dependentObject.position, currentObject.position);
                 int index = floor(distanceToCurrent / increment);
 
-                if (index < 0 || index >= NUM_BUCKETS) {
-#if DEBUG
-                    printFloat(MString("*** Distance To Center"), distanceToCurrent);
-                    printFloat(MString("*** WRONG Index"), index);
-#endif
-                }
-                else {
+                if (index > 0 && index < NUM_BUCKETS) {
                     histogram[index]++;
                     numObjects++;
                 }

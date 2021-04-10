@@ -200,36 +200,27 @@ vec3 getRandPosInRegion(SelectionType st, float w, float h, vec3 pos) {
 }
 
 float WorldPalette::calculateRatio(Distribution& tmpDist) {
-    /*for (int x = 0; x < NUM_BUCKETS; x++) {
-        if (this->currentlySelectedRegion.histograms[0][0].second[x] == 0) {
-            oldRatio += oldDist.histograms[0][0].second[x];
-            newRatio += tmpDist.histograms[0][0].second[x];
-        }
-        else {
-            if (oldDist.histograms[0][0].second[x] != 0) {
-                oldRatio += oldDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-            }
-            if (tmpDist.histograms[0][0].second[x] != 0) {
-                newRatio += tmpDist.histograms[0][0].second[x] / this->currentlySelectedRegion.histograms[0][0].second[x];
-            }
-        }
-    }*/
-    
     float newRatio = 0;
-    for (int x = 0; x < NUM_BUCKETS; x++) {
-        if (this->currentlySelectedRegion.histograms[0][0].second[x] <= 0.2) {
-            if (tmpDist.histograms[0][0].second[x] > 0.2) {
-                newRatio += tmpDist.histograms[0][0].second[x] * 20.0;
+    for (int i = 0; i < currentlySelectedRegion.histograms.size(); i++) {
+        for (int j = 0; j < currentlySelectedRegion.histograms[i].size(); j++) {
+            for (int x = 0; x < NUM_BUCKETS; x++) {
+                if (this->currentlySelectedRegion.histograms[i][j].second[x] == 0) {
+                    if (tmpDist.histograms[i][j].second[x] != 0) {
+                        newRatio += tmpDist.histograms[i][j].second[x] * 20.0;
+                    }
+                }
+                else {
+                    newRatio += abs(this->currentlySelectedRegion.histograms[i][j].second[x] - tmpDist.histograms[i][j].second[x]);
+                }
             }
-        }
-        else {
-            newRatio += abs(this->currentlySelectedRegion.histograms[0][0].second[x] - tmpDist.histograms[0][0].second[x]);
         }
     }
     return newRatio;
 }
 
 std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos) {
+
+    float buffer = 1.0; // we don't want to generate meshes right at the edge
 
     // 1. Create a empty selected region that will represent our area to paste into
     SelectedRegion pasteRegion(SelectionType::NONE, w, h, min, max, pos);
@@ -238,32 +229,32 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     // 2. Declare a vector of scene objects that will store the generated meshes
     std::vector<SceneObject> result;
 
+
     // 3. Initialize a random distribution depending on the density of the currently selected sample
-    float buffer = 1.0; // we don't want to generate meshes right at the edge
+    for (std::pair<CATEGORY, std::vector<SceneObject>> category : currentlySelectedRegion.sceneObjects) {
 
-    // example density
-    float exampleDensity = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-
-    // TO DO: FIND THE DENSITY OF EVERY CATEGORY
-    float density = this->currentlySelectedRegion.selectedRegion.objects.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-    int numElements = std::max(5.0f, ceil(density * pasteRegion.getArea()));
+        float density = category.second.size() / this->currentlySelectedRegion.selectedRegion.getArea();
+        int numElements = std::max(5.0f, ceil(density * pasteRegion.getArea()));
 #if DEBUG
-    printFloat(MString("Density: "), density);
-    printFloat(MString("Original NumElements in Paste Area: "), numElements);
+        printFloat(MString("Density: "), density);
+        printFloat(MString("Original NumElements in Paste Area: "), numElements);
 #endif
-    if (numElements < 1) {
-        printString(MString("Error: "), MString("< 1 num elements in new area"));
-        return result;
+        if (numElements < 1) {
+            printString(MString("Error: "), MString("< 1 num elements in new area"));
+            return result;
+        }
+
+        for (int i = 0; i < numElements; i++) {
+            // make a random position in the region's bound
+            vec3 randLocalPos = getRandPosInRegion(st, w - buffer, h - buffer, pos);
+            MString name((std::string("NewSphere") + std::to_string(i)).c_str());
+            CATEGORY assignedCat = category.first;
+            result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
+        }
     }
 
-    // TO DO: GENERATE OBJECTS OF EVERY EXISTING CATEGORY BASED ON DENSITY
-    // TO DO: MAKE TABLE THAT MATCHES CATEGORIES WITH LAYER WITH DATATYPE
-    for (int i = 0; i < numElements; i++) {
-        // make a random position in the region's bound
-        vec3 randLocalPos = getRandPosInRegion(st, w - buffer, h - buffer, pos);
-        MString name((std::string("NewSphere") + std::to_string(i)).c_str());
-        result.push_back(SceneObject(LAYER::VEGETATION, CATEGORY::HOUSE, DATATYPE::DISTRIBUTION, randLocalPos, name));
-    }
+    int numElements = result.size();
+    printFloat(MString("Original Elements: "), numElements);
 
     // 5. Go through a fixed number of iterations
     pasteRegion.objects = result;
@@ -280,10 +271,13 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             // --- a) add element at random location
             vec3 randLocation = getRandPosInRegion(st, w - buffer, h - buffer, pos);
 
-            // --- b) assign a random category to it // TO DO : IT'S ALL THE SAME CATEGORY FOR NOW
+            // --- b) assign a random category to it
             MString name((std::string("NewSphere") + std::to_string(result.size())).c_str());
-            CATEGORY assignedCategory = CATEGORY::HOUSE;
-            result.push_back(SceneObject(LAYER::VEGETATION, assignedCategory, DATATYPE::DISTRIBUTION, randLocation, name));
+            auto it = currentlySelectedRegion.sceneObjects.begin();
+            std::advance(it, rand() % currentlySelectedRegion.sceneObjects.size());
+            CATEGORY assignedCategory = it->first;
+            printFloat(MString("Category: "), static_cast<std::underlying_type<CATEGORY>::type>(assignedCategory));
+            result.push_back(SceneObject(getLayer(assignedCategory), assignedCategory, getType(assignedCategory), randLocation, name));
 
             // --- c) generate new histogram with this new element
             pasteRegion.objects = result;
@@ -291,11 +285,9 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             float newRatio = calculateRatio(tmpDist);
 #if DEBUG
             printFloat(MString("Current Iteration: "), i);
-            //printFloat(MString("(BIRTH) Acceptance Rate: "), acceptanceRate);
             printFloat(MString("(BIRTH) Old Ratio: "), oldRatio);
             printFloat(MString("(BIRTH) New Ratio: "), newRatio);
 #endif
-            //if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() > numElements + ELEMENT_BUFFER) {
             if (oldRatio < newRatio || result.size() > numElements + floor(numElements * 0.2)) {
                 // we do not accept the new scene object
                 result.pop_back();
@@ -307,6 +299,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             }
         }
         else {
+
                 // Element Death
                 // --- a) select a random index to delete
                 int randIndex = rand() % result.size();
@@ -321,11 +314,9 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 float newRatio = calculateRatio(tmpDist);
 #if DEBUG
                 printFloat(MString("Current Iteration: "), i);
-                //printFloat(MString("(DEATH) Acceptance Rate: "), acceptanceRate);
                 printFloat(MString("(DEATH) Old Ratio: "), oldRatio);
                 printFloat(MString("(DEATH) New Ratio: "), newRatio);
 #endif
-                //if (abs(oldRatio - 1) < abs(newRatio - 1) || result.size() < numElements - ELEMENT_BUFFER) {
                 if (oldRatio < newRatio || result.size() < numElements - floor(numElements * 0.2)) {
                     // we do not accept the death
                     result.push_back(tmpObj);
@@ -381,8 +372,8 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
             wpos[1] = height;
         }
         std::string com = ","; // comma
-        // The first parameter I'm passing below (1) is the type index (0: rock, 1: tree)
-        MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(1,") + std::to_string(wpos[0]) + com + std::to_string(wpos[1]) + com + std::to_string(wpos[2]) + std::string(")")).c_str());
+        MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(geom.category)) + com 
+                                + std::to_string(wpos[0]) + com + std::to_string(wpos[1]) + com + std::to_string(wpos[2]) + std::string(")")).c_str());
 	}
 }
 
