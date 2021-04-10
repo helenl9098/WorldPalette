@@ -1,37 +1,4 @@
-﻿  Distribution.cpp
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(16,24): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(251,24): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(252,38): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(256,36): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(291,40): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(292,27): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(308,25): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Distribution.cpp(309,25): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  Terrain.cpp
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(7,96): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(8,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(9,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(10,94): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(116,38): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(116,49): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(165,37): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(165,48): warning C4244: 'argument': conversion from 'double' to 'const unsigned __int64', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(170,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(175,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(180,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(185,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(201,11): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(203,51): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(217,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\Terrain.cpp(219,52): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-  WPPlugin.cpp
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(299,62): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(299,48): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(323,50): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(323,43): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(334,51): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WPPlugin.cpp(334,44): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-  WorldPalette.cpp
+﻿  WorldPalette.cpp
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(174,20): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(193,25): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(209,78): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
@@ -41,18 +8,11 @@ C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(237,2
               _Ty=float
           ]
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(256,36): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(257,48): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(267,27): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(279,97): warning C4244: 'argument': conversion from 'std::_Underlying_type<_Ty,true>::type' to 'float', possible loss of data
-          with
-          [
-              _Ty=CATEGORY
-          ]
-  helper.cpp
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(266,27): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
      Creating library C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.lib and object C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.exp
   Generating code
-  16 of 973 functions ( 1.6%) were compiled, the rest were copied from previous compilation.
-    13 functions were new in current compilation
+  3 of 960 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
     29 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   WorldPalette.vcxproj -> C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.mll

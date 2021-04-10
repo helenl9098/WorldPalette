@@ -254,7 +254,6 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     }
 
     int numElements = result.size();
-    printFloat(MString("Original Elements: "), numElements);
 
     // 5. Go through a fixed number of iterations
     pasteRegion.objects = result;
@@ -273,10 +272,16 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
             // --- b) assign a random category to it
             MString name((std::string("NewSphere") + std::to_string(result.size())).c_str());
-            auto it = currentlySelectedRegion.sceneObjects.begin();
-            std::advance(it, rand() % currentlySelectedRegion.sceneObjects.size());
-            CATEGORY assignedCategory = it->first;
-            printFloat(MString("Category: "), static_cast<std::underlying_type<CATEGORY>::type>(assignedCategory));
+
+
+            int randIndex = rand() % currentlySelectedRegion.selectedRegion.objects.size();
+            CATEGORY assignedCategory = currentlySelectedRegion.selectedRegion.objects[randIndex].category;
+
+
+            //auto it = currentlySelectedRegion.sceneObjects.begin();
+            //std::advance(it, rand() % currentlySelectedRegion.sceneObjects.size());
+            //CATEGORY assignedCategory = it->first;
+
             result.push_back(SceneObject(getLayer(assignedCategory), assignedCategory, getType(assignedCategory), randLocation, name));
 
             // --- c) generate new histogram with this new element
