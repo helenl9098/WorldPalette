@@ -137,7 +137,7 @@ global proc focusOnCurrentSelection()
     }
 }
 
-global proc moveAlongAxis(float $val, int $axis)
+global proc moveAlongAxis(float $val, int $axis, int $mode)
 {
     global string $selectionRegion[];
     global int $selectionType;
@@ -153,9 +153,34 @@ global proc moveAlongAxis(float $val, int $axis)
         }
         select -cl  ; // deselect
         
-        // Map region vertices to terrain height (if there is terrain)
-        if ($isTerrainLoaded) {
-            WorldPalette -msr true;
+        // Mode
+        // 0: Move selection region
+        // 1: Move distribution within selection region
+        switch($mode) {
+            case 0:
+                // Map region vertices to terrain height (if there is terrain)
+                if ($isTerrainLoaded) {
+                    WorldPalette -msr true;
+                }
+                break;
+            case 1:
+                // Map region vertices to terrain height (if there is terrain)
+                if ($isTerrainLoaded) {
+                    if ($axis == 0) {
+                        WorldPalette -msr true -dx $val;
+                    } else if ($axis == 1) {
+                        WorldPalette -msr true -dz $val;
+                    }
+                } else {
+                    if ($axis == 0) {
+                        WorldPalette -dx $val;
+                    } else if ($axis == 1) {
+                        WorldPalette -dz $val;
+                    }
+                }
+                break;
+            default:
+                break;
         }
     }
 }
@@ -327,7 +352,7 @@ global proc loadDefaultScene()
         int $t = 1;// trees
         float $rx = `rand -1 1`;
         float $rz = `rand -1 1`;
-        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+        addSceneGeometryAtLoc($t, $rx, $rz);
     }
     
     int $numPrims2 = 40;
@@ -335,7 +360,7 @@ global proc loadDefaultScene()
         int $t = 0;//`rocks
         float $rx = `rand -5 5`;
         float $rz = `rand -5 5`;
-        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+        addSceneGeometryAtLoc($t, $rx, $rz);
     }
 }
 
@@ -396,11 +421,17 @@ global proc addSceneGeom(int $type)
     }
 }
 
-global proc addSceneGeometryAtLoc(int $type, float $wx, float $wy, float $wz)
+global proc addSceneGeometryAtLoc(int $type, float $wx, float $wz)
 {
+    global int $isTerrainLoaded;
     // This one generates the geometry at given location
     addSceneGeom($type);
-    move -x $wx -y $wy -z $wz;
+    move -x $wx -z $wz;
+    // Update the y-position if there is terrain
+    if ($isTerrainLoaded) {
+        string $selected[] = `ls -sl`;
+        WorldPalette -ugh $selected[0];
+    }
 }
 
 global proc importSceneOBJs()
@@ -511,8 +542,8 @@ global proc ShowGUI()
                     setParent ..;
                 frameLayout -label "Move Selection";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
-                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 0)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 0)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 0)";
                         setParent ..;
                     setParent ..;
                 frameLayout -label "Resize Selection";
@@ -533,6 +564,11 @@ global proc ShowGUI()
                         $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
                         button -l "Update Priority" -c updatePriority;
                     setParent ..;
+                frameLayout -label "Move Distribution";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 1)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 1)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 1)";
+                    setParent ..;
                 frameLayout -label "Palette";
                     rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
                     $palette[0] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
@@ -551,8 +587,8 @@ global proc ShowGUI()
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Load Default Scene" -c loadDefaultScene;
                         button -l "Paste Distribution" -c pasteDistribution;
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
+                        // iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
+                        // iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
                         button -l "Load Terrain" -c loadTerrain;
                         button -l "Delete Terrain" -c deleteTerrain;
                     setParent ..;
@@ -636,6 +672,9 @@ global int $numSlots = 10;
 global int $freeIdx = 0; // Use the slot at this index for saving
 global int $paletteOccupancy[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; // We only support 10 slots for now (0 = free, 1 = occupied)
 global int $currentSlot = -1; // currently selected slot/distribution
+
+// Brush
+global int $isBrushActive = false;
 
 // Selection Shader
 global string $selectionMat;
