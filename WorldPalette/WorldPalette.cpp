@@ -382,6 +382,30 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 	}
 }
 
+void WorldPalette::moveDistribution(float dx, float dz) {
+    // TO DO: Change this so it's not manually set 
+    dx = 1.f; 
+    dz = 0.f;
+    for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
+
+        MGlobal::executeCommand("select -r " + o.name); // Select the geometry
+        MGlobal::executeCommand((std::string("move -r ") + std::to_string(dx) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(dz)).c_str()); // Select the geometry
+        
+        /*
+        // Find the height of the geometry
+        float height = 0.f;
+        int triIdx = 0;
+        vec2 coords;
+        int res = WorldPalette::terrain.findHeight(height, triIdx, coords, wpos);
+        if (res) {
+            wpos[1] = height;
+        }
+
+        // set the y
+        MGlobal::executeCommand(setAttr "pSphere1.translateY" 6); */
+    }
+}
+
 void WorldPalette::updatePriorityOrder(std::vector<int>& newOrder) {
 	for (int i = 0; i < newOrder.size(); ++i) {
 		WorldPalette::priorityOrder[i] = static_cast<CATEGORY>(newOrder[i]);

@@ -39,6 +39,7 @@ public:
 	
 	// TO DO: add future editing operations here
 	void pasteDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index);
+	void moveDistribution(float dx, float dz);
 
 	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
 

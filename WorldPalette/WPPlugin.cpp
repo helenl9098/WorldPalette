@@ -331,7 +331,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	else {
 		if (width > 0) {
 			// Delete existing geometry in the region and paste new geometry
-			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
+			//worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
+			worldPalette.moveDistribution(0.f, 0.f);
 		}
 	}
 	return status;
