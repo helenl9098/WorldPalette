@@ -37,6 +37,7 @@ public:
 						double& terrainHeight,
 						int& terrainSubWidth,
 						int& terrainSubHeight,
+						MString& geomToMove,
 						vec2& dpos);
 };
 #endif
