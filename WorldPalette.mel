@@ -137,7 +137,7 @@ global proc focusOnCurrentSelection()
     }
 }
 
-global proc moveAlongAxis(float $val, int $axis)
+global proc moveAlongAxis(float $val, int $axis, int $mode)
 {
     global string $selectionRegion[];
     global int $selectionType;
@@ -153,9 +153,34 @@ global proc moveAlongAxis(float $val, int $axis)
         }
         select -cl  ; // deselect
         
-        // Map region vertices to terrain height (if there is terrain)
-        if ($isTerrainLoaded) {
-            WorldPalette -msr true;
+        // Mode
+        // 0: Move selection region
+        // 1: Move distribution within selection region
+        switch($mode) {
+            case 0:
+                // Map region vertices to terrain height (if there is terrain)
+                if ($isTerrainLoaded) {
+                    WorldPalette -msr true;
+                }
+                break;
+            case 1:
+                // Map region vertices to terrain height (if there is terrain)
+                if ($isTerrainLoaded) {
+                    if ($axis == 0) {
+                        WorldPalette -msr true -dx $val;
+                    } else if ($axis == 1) {
+                        WorldPalette -msr true -dz $val;
+                    }
+                } else {
+                    if ($axis == 0) {
+                        WorldPalette -dx $val;
+                    } else if ($axis == 1) {
+                        WorldPalette -dz $val;
+                    }
+                }
+                break;
+            default:
+                break;
         }
     }
 }
@@ -511,8 +536,8 @@ global proc ShowGUI()
                     setParent ..;
                 frameLayout -label "Move Selection";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Move +X" -c "moveAlongAxis(1.0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0)";
-                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1)";
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 0)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 0)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 0)";
                         setParent ..;
                     setParent ..;
                 frameLayout -label "Resize Selection";
@@ -532,6 +557,11 @@ global proc ShowGUI()
                     columnLayout -columnAttach "both" 5 -rowSpacing 10;
                         $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
                         button -l "Update Priority" -c updatePriority;
+                    setParent ..;
+                frameLayout -label "Move Distribution";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 1)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 1)";
+                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 1)";
                     setParent ..;
                 frameLayout -label "Palette";
                     rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;

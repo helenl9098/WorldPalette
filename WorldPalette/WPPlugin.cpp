@@ -45,6 +45,12 @@
 #define kTerrainSubdivisionHeightFlag "-tsh"
 #define kTerrainSubdivisionHeightFlagLong "-terrainSubHeight"
 
+// Editing flags
+#define kChangeInXFlag "-dx"
+#define kChangeInXFlagLong "-dxpos"
+#define kChangeInZFlag "-dz"
+#define kChangeInZFlagLong "-dzpos"
+
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
 // Maya Plugin creator function
@@ -77,6 +83,9 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kTerrainHeightFlag, kTerrainHeightFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kTerrainSubdivisionWidthFlag, kTerrainSubdivisionWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kTerrainSubdivisionHeightFlag, kTerrainSubdivisionHeightFlagLong, MSyntax::kDouble);
+
+	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
 	return syntax;
 }
 
@@ -96,7 +105,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  double& terrainWidth,
 							  double& terrainHeight,
 							  int& terrainSubWidth,
-							  int& terrainSubHeight)
+							  int& terrainSubHeight,
+							  vec2& dpos)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -255,6 +265,16 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kTerrainSubdivisionHeightFlagLong, 0, temp);
 		terrainSubHeight = (int)temp;
 	}
+	if (parser.isFlagSet(kChangeInXFlag)) {
+		stat = parser.getFlagArgument(kChangeInXFlag, 0, dpos[0]);
+	} else if (parser.isFlagSet(kChangeInXFlagLong)) {
+		stat = parser.getFlagArgument(kChangeInXFlagLong, 0, dpos[0]);
+	}
+	if (parser.isFlagSet(kChangeInZFlag)) {
+		stat = parser.getFlagArgument(kChangeInZFlag, 0, dpos[1]);
+	} else if (parser.isFlagSet(kChangeInZFlagLong)) {
+		stat = parser.getFlagArgument(kChangeInZFlagLong, 0, dpos[1]);
+	}
 	return stat;
 }
 
@@ -285,9 +305,14 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	double terrainHeight = 0;
 	int terrainSubWidth = 0;
 	int terrainSubHeight = 0;
+
+	// Editing stuff
+	vec2 dpos = vec2(0, 0);
+
+	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
-				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight); // get all the arguments
+				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, dpos);
 
 	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
@@ -302,6 +327,11 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	if (isSelRegionMoving) {
 		// Update selection region
 		WorldPalette::terrain.updateSelectionRegion();
+	}
+
+	// Update the geometry within selection region (if dpos is provided)
+	if (dpos[0] != 0 || dpos[1] != 0) {
+		// TO DO : Call function to update geometry position within region
 	}
 
 	// checking arguments

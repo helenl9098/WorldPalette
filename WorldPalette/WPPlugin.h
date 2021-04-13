@@ -36,6 +36,7 @@ public:
 						double& terrainWidth,
 						double& terrainHeight,
 						int& terrainSubWidth,
-						int& terrainSubHeight);
+						int& terrainSubHeight,
+						vec2& dpos);
 };
 #endif
