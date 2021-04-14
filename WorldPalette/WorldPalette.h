@@ -45,6 +45,7 @@ public:
 	// Static variables
 	static std::vector<CATEGORY> priorityOrder; // priority order - items in the beginning are prioritized
 	static Terrain terrain; // World terrain
+	static std::vector<vec3> brushStrokes; // list of brush stroke center positions during brush drag
 
 	~WorldPalette();
 };

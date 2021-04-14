@@ -45,13 +45,23 @@
 #define kTerrainSubdivisionHeightFlag "-tsh"
 #define kTerrainSubdivisionHeightFlagLong "-terrainSubHeight"
 #define kUpdateSceneGeometryHeightFlag "-ugh"
-#define kUpdateSceneGeometryHeightFlagLong "-ugeomheight"
+#define kUpdateSceneGeometryHeightFlagLong "-uGeomHeight"
 
-// Editing flags
+// Move editing flags
 #define kChangeInXFlag "-dx"
 #define kChangeInXFlagLong "-dxpos"
 #define kChangeInZFlag "-dz"
 #define kChangeInZFlagLong "-dzpos"
+
+// Brush editing flags
+#define kSaveBrushStrokeFlag "-sb"
+#define kSaveBrushStrokeFlagLong "-saveBrush"
+#define kSaveBrushStrokePositionFlag "-sbp"
+#define kSaveBrushStrokePositionFlagLong "-saveBrushPos"
+#define kReleaseBrushFlag "-rb"
+#define kReleaseBrushFlagLong "-releaseBrush"
+#define kBrushWidthFlag "-bw"
+#define kBrushWidthFlagLong "-brushWidth"
 
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
@@ -89,6 +99,10 @@ MSyntax WPPlugin::newSyntax()
 
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kSaveBrushStrokePositionFlag, kSaveBrushStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
+	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kBrushWidthFlag, kBrushWidthFlagLong, MSyntax::kDouble);
 	return syntax;
 }
 
@@ -110,7 +124,11 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  int& terrainSubWidth,
 							  int& terrainSubHeight,
 							  MString& geomToMove,
-							  vec2& dpos)
+							  vec2& dpos,
+							  bool& saveBrush,
+							  vec2& brushPos,
+							  bool& releaseBrush,
+							  double& brushWidth)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -285,6 +303,28 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kChangeInZFlagLong)) {
 		stat = parser.getFlagArgument(kChangeInZFlagLong, 0, dpos[1]);
 	}
+	if (parser.isFlagSet(kSaveBrushStrokeFlag)) {
+		stat = parser.getFlagArgument(kSaveBrushStrokeFlag, 0, saveBrush);
+	} else if (parser.isFlagSet(kSaveBrushStrokeFlagLong)) {
+		stat = parser.getFlagArgument(kSaveBrushStrokeFlagLong, 0, saveBrush);
+	}
+	if (parser.isFlagSet(kSaveBrushStrokePositionFlag)) {
+		stat = parser.getFlagArgument(kSaveBrushStrokePositionFlag, 0, brushPos[0]);
+		stat = parser.getFlagArgument(kSaveBrushStrokePositionFlag, 1, brushPos[1]);
+	} else if (parser.isFlagSet(kSaveBrushStrokePositionFlagLong)) {
+		stat = parser.getFlagArgument(kSaveBrushStrokePositionFlagLong, 0, brushPos[0]);
+		stat = parser.getFlagArgument(kSaveBrushStrokePositionFlagLong, 1, brushPos[1]);
+	}
+	if (parser.isFlagSet(kReleaseBrushFlag)) {
+		stat = parser.getFlagArgument(kReleaseBrushFlag, 0, releaseBrush);
+	} else if (parser.isFlagSet(kReleaseBrushFlagLong)) {
+		stat = parser.getFlagArgument(kReleaseBrushFlagLong, 0, releaseBrush);
+	}
+	if (parser.isFlagSet(kBrushWidthFlag)) {
+		stat = parser.getFlagArgument(kBrushWidthFlag, 0, brushWidth);
+	} else if (parser.isFlagSet(kBrushWidthFlagLong)) {
+		stat = parser.getFlagArgument(kBrushWidthFlagLong, 0, brushWidth);
+	}
 	return stat;
 }
 
@@ -293,7 +333,10 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 {
 	MStatus status;
 
-	// parse files
+	/* 
+	* Step 1: Parse command arguments
+	*/
+
 	MString name("");
 
 	// Selection region stuff
@@ -305,9 +348,10 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec3 maxBound;
 	int paletteIdx = -1;
 	bool isSelRegionMoving = false; // did we move the selection region? (this is for updating region heights)
-
-	std::vector<int> priOrder;
 	bool isGenerating = false; // is the passed in area for generating?
+
+	// Priority order stuff
+	std::vector<int> priOrder;
 
 	// Terrain stuff
 	MString terrainName("");
@@ -317,24 +361,37 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	int terrainSubHeight = 0;
 	MString geomToMove("");
 
-	// Editing stuff
+	// Move editing stuff
 	vec2 dpos = vec2(0, 0);
+
+	// Brush editing stuff
+	bool saveBrush = false;
+	vec2 brushPos;
+	bool releaseBrush = false;
+	double brushWidth;
 
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
-				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, dpos);
+				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
+				dpos, saveBrush, brushPos, releaseBrush, brushWidth);
+
+	/*
+	* Step 2: Call needed WorldPalette operations
+	*/
 
 	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
 	}
 
+	// Initialize terrain (if needed)
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
 		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
 	}
 
+	// Move scene geometry to terrain height (if needed)
 	if (geomToMove.length() > 0) {
 		// Update the geometry height
 		MDoubleArray posArr(3, 0);
@@ -349,6 +406,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		}
 	}
 
+	// Update selection region 3D position (if needed)
 	if (isSelRegionMoving) {
 		// Update selection region
 		WorldPalette::terrain.updateSelectionRegion();
@@ -359,19 +417,21 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		// TO DO : Call function to update geometry position within region
 	}
 
-	// checking arguments
-#if DEBUG
-	printFloat(MString("Width Argument: "), width);
-	printFloat(MString("Height Argument: "), height);
-	printVec3(MString("Min Argument: "), minBound);
-	printVec3(MString("Max Argument: "), maxBound);
-	printVec3(MString("Center Argument: "), center);
-#endif
+	// Save brush stroke position (if needed)
+	if (saveBrush) {
+		WorldPalette::brushStrokes.push_back(vec3(brushPos[0], 0, brushPos[1])); // push stroke center position
+		printVec2(MString("Saved stroke at position: "), brushPos);
+	}
 
-	// Plugin's functionality
-	// TO DO: We need to do some error checks! (like if w is < 0 etc)
+	// Use saved brush strokes, then reset the list
+	if (releaseBrush) {
+		// TO DO: Call function to use the strokes given width
+		WorldPalette::brushStrokes.clear(); // empty the stroke list
+		printString(MString("Brush released!"), "");
+	}
 
 	// Check if we're saving/generating or pasting a distribution
+	// TO DO: We need to do some error checks! (like if w is < 0 etc)
 	if (isGenerating) {
 		if (width > 0) {
 			// Saving distribution
@@ -389,6 +449,15 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 		}
 	}
+
+	// checking arguments
+#if DEBUG
+	printFloat(MString("Width Argument: "), width);
+	printFloat(MString("Height Argument: "), height);
+	printVec3(MString("Min Argument: "), minBound);
+	printVec3(MString("Max Argument: "), maxBound);
+	printVec3(MString("Center Argument: "), center);
+#endif
 	return status;
 }
 
