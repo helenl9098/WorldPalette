@@ -36,6 +36,8 @@
 // Height visualization/terrain flags
 #define kTerrainNameFlag "-tn"
 #define kTerrainNameFlagLong "-terrainName"
+#define kUnitializeTerrainFlag "-ut"
+#define kUnitializeTerrainFlagLong "-uninitializeTerrain"
 #define kTerrainWidthFlag "-tw"
 #define kTerrainWidthFlagLong "-terrainWidth"
 #define kTerrainHeightFlag "-th"
@@ -91,6 +93,7 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kIsGeneratingFlag, kIsGeneratingFlagLong, MSyntax::kBoolean);
 
 	syntax.addFlag(kTerrainNameFlag, kTerrainNameFlagLong, MSyntax::kString);
+	syntax.addFlag(kUnitializeTerrainFlag, kUnitializeTerrainFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kTerrainWidthFlag, kTerrainWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kTerrainHeightFlag, kTerrainHeightFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kTerrainSubdivisionWidthFlag, kTerrainSubdivisionWidthFlagLong, MSyntax::kDouble);
@@ -99,9 +102,9 @@ MSyntax WPPlugin::newSyntax()
 
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
-	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kSaveBrushStrokePositionFlag, kSaveBrushStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
-	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kBrushWidthFlag, kBrushWidthFlagLong, MSyntax::kDouble);
 	return syntax;
 }
@@ -119,6 +122,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  bool& isGenerating,
 							  bool& moveSelRegion,
 							  MString& terrainName,
+							  bool& uninitializeTerrain,
 							  double& terrainWidth,
 							  double& terrainHeight,
 							  int& terrainSubWidth,
@@ -251,6 +255,11 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	{
 		stat = parser.getFlagArgument(kTerrainNameFlagLong, 0, terrainName);
 	}
+	if (parser.isFlagSet(kUnitializeTerrainFlag)) {
+		stat = parser.getFlagArgument(kUnitializeTerrainFlag, 0, uninitializeTerrain);
+	} else if (parser.isFlagSet(kUnitializeTerrainFlagLong)) {
+		stat = parser.getFlagArgument(kUnitializeTerrainFlagLong, 0, uninitializeTerrain);
+	}
 	if (parser.isFlagSet(kTerrainWidthFlag))
 	{
 		stat = parser.getFlagArgument(kTerrainWidthFlag, 0, terrainWidth);
@@ -355,6 +364,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Terrain stuff
 	MString terrainName("");
+	bool uninitializeTerrain = false;
 	double terrainWidth = 0;
 	double terrainHeight = 0;
 	int terrainSubWidth = 0;
@@ -373,8 +383,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
-				terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
-				dpos, saveBrush, brushPos, releaseBrush, brushWidth);
+				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, 
+		        geomToMove, dpos, saveBrush, brushPos, releaseBrush, brushWidth);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
@@ -389,6 +399,10 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
 		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
+	}
+	// Uninitialize terrain (if needed)
+	if (uninitializeTerrain) {
+		WorldPalette::terrain = Terrain();
 	}
 
 	// Move scene geometry to terrain height (if needed)
@@ -414,6 +428,9 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Update the geometry within selection region (if dpos is provided)
 	if (dpos[0] != 0 || dpos[1] != 0) {
+		// Update the distribution first
+		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+		// Now, move the distribution
 		worldPalette.moveDistribution(dpos[0], dpos[1]);
 	}
 
@@ -444,7 +461,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		}
 	}
 	else {
-		if (width > 0) {
+		if (width > 0 && dpos[0] == 0 && dpos[1] == 0) {
 			// Delete existing geometry in the region and paste new geometry
 			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 		}

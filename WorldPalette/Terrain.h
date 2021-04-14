@@ -42,6 +42,7 @@ class Terrain
 
 		static double distance2D(vec2 p0, vec2 p1);
 
+		bool isInitialized; // is this terrain initialized?
 		std::vector<std::vector<TerrainTile>> tileMap; // height map for tiles
 		MString name; // geom name
 		float width; // terrain width

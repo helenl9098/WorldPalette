@@ -33,6 +33,7 @@ public:
 						bool& isGenerating,
 						bool& moveSelRegion,
 						MString& terrainName,
+						bool& uninitializeTerrain,
 						double& terrainWidth,
 						double& terrainHeight,
 						int& terrainSubWidth,

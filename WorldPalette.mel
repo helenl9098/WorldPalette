@@ -152,6 +152,26 @@ global proc moveAlongAxis(float $val, int $axis, int $mode)
             move -z ($val + (getAttr ($selectionRegion[0] + ".translateZ")));
         }
         select -cl  ; // deselect
+
+        // Get region properties
+        float $width = 0;
+        float $height = 0;
+        float $bb[]; // bound box
+        float $wp[]; // world position
+        if ($selectionType == 1) {
+            // PLANAR
+            $width = `polyPlane -q -w $selectionRegion`;
+            $height = `polyPlane -q -h $selectionRegion`;
+            $bb = `exactWorldBoundingBox $selectionRegion`;
+            $wp = `xform -q -ws -t $selectionRegion`;
+            //WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
+        } else if ($selectionType == 2) {
+            // RADIAL
+            $width = `polyCylinder -q -r $selectionRegion[0]`;
+            $bb = `exactWorldBoundingBox selectionRegion`;
+            $wp = `xform -q -ws -t $selectionRegion`;
+           //WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
+        }
         
         // Mode
         // 0: Move selection region
@@ -167,15 +187,15 @@ global proc moveAlongAxis(float $val, int $axis, int $mode)
                 // Map region vertices to terrain height (if there is terrain)
                 if ($isTerrainLoaded) {
                     if ($axis == 0) {
-                        WorldPalette -msr true -dx $val;
+                        WorldPalette -msr true -dx $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
                     } else if ($axis == 1) {
-                        WorldPalette -msr true -dz $val;
+                        WorldPalette -msr true -dz $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
                     }
                 } else {
                     if ($axis == 0) {
-                        WorldPalette -dx $val;
+                        WorldPalette -dx $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
                     } else if ($axis == 1) {
-                        WorldPalette -dz $val;
+                        WorldPalette -dz $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
                     }
                 }
                 break;
@@ -586,6 +606,7 @@ global proc deleteTerrain()
         }
         delete;
         $isTerrainLoaded = false;
+        WorldPalette -ut true; // uninitialize terrain
         // Map selection region vertices to zero height (if there is selection region)
         if ($selectionType) {
             int $count[] = `polyEvaluate -v "selectionRegion"`;
