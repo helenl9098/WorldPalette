@@ -220,7 +220,7 @@ float WorldPalette::calculateRatio(Distribution& tmpDist) {
     return newRatio;
 }
 
-std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos) {
+std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, std::vector<SceneObject>& influenceObjects) {
 
     float buffer = 1.0; // we don't want to generate meshes right at the edge
 
@@ -248,15 +248,19 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
         for (int i = 0; i < numElements; i++) {
             // make a random position in the region's bound
-            vec3 randLocalPos = getRandPosInRegion(st, w - buffer, h - buffer, pos);
+            vec3 randLocalPos = getRandPosInRegion(st, w - buffer - influenceRadius, h - buffer - influenceRadius, pos);
             MString name((std::string("NewSphere") + std::to_string(i)).c_str());
             CATEGORY assignedCat = category.first;
             result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
         }
     }
 
-    int numElements = result.size();
+    // this is for brushing. If there are any objects in the influence circle, then we add them to the end result
+    for (SceneObject& o : influenceObjects) {
+        result.push_back(o);
+    }
 
+    int numElements = result.size();
     // 5. Go through a fixed number of iterations
     pasteRegion.objects = result;
     Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
@@ -270,7 +274,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
             // Element Birth
             // --- a) add element at random location
-            vec3 randLocation = getRandPosInRegion(st, w - buffer, h - buffer, pos);
+            vec3 randLocation = getRandPosInRegion(st, w - buffer - influenceRadius, h - buffer - influenceRadius, pos);
 
             // --- b) assign a random category to it
             MString name((std::string("NewSphere") + std::to_string(result.size())).c_str());
@@ -359,15 +363,16 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 	// First delete the existing geometry within the region
 	std::vector<SceneObject> geomToDelete;
 	findSceneObjects(geomToDelete, st, w, h, min, max, pos); // find the objects within the selection region
-	for (SceneObject geom : geomToDelete) {
+	for (SceneObject& geom : geomToDelete) {
 		MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
 		MGlobal::executeCommand("delete"); // Delete the geometry
 	}
 
 	// Find the positions where the new geometry will be created
-    std::vector<SceneObject> geomToPaste = metropolisHastingSampling(st, w, h, min, max, pos);
+    std::vector<SceneObject> empty;
+    std::vector<SceneObject> geomToPaste = metropolisHastingSampling(st, w, h, min, max, pos, 0, empty);
 	
-	for (SceneObject geom : geomToPaste) {
+	for (SceneObject& geom : geomToPaste) {
 		// Get the world position of the geometry
 		vec3 wpos = geom.position + pos;
         // Find the height of the geometry
@@ -385,9 +390,8 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
-    // TO DO: Change this so it's not manually set
     currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
-    for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
+    for (SceneObject& o : currentlySelectedRegion.selectedRegion.objects) {
 
         MGlobal::executeCommand("select -r " + o.name); // Select the geometry
         MGlobal::executeCommand((std::string("move -r ") + std::to_string(dx) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(dz)).c_str()); // Select the geometry
@@ -410,12 +414,99 @@ void WorldPalette::moveDistribution(float dx, float dz) {
         vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
         vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
         float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
-        printFloat(MString("Diffuse Term: "), diffuseTerm);
         if (diffuseTerm < NORM_FACTOR) {
-            printString(MString("Hiding Object: "), o.name);
             MGlobal::executeCommand((std::string("hide ") + o.name.asChar()).c_str());
         }
     }
+}
+
+void WorldPalette::brushDistribution(float brushWidth) {
+    std::vector<SceneObject> generatedObjects; // contains the objects along the entire path
+
+    // first, we iterate through the list of stroke points to see which ones we want to sample (the less the better)
+    std::vector<vec3> finalPoints; // this is the list of the final points we want to draw IMPORTANT NOTE: THIS STORES OBJECTS IN WORLD POS
+    SelectionType st = SelectionType::RADIAL;
+    vec3 min = vec3(0, 0, 0);
+    float h = 0;
+
+    vec3 previousPoint;
+    for (int i = 0; i < WorldPalette::brushStrokes.size(); i++) {
+        // always add the first one
+        if (i == 0) {
+            finalPoints.push_back(WorldPalette::brushStrokes[i]);
+            previousPoint = WorldPalette::brushStrokes[i];
+            continue;
+        }
+        // add the furthest point that is approximately 1/2 brush width away from the last point
+        if (Distance(previousPoint, WorldPalette::brushStrokes[i]) > brushWidth / 2) {
+            // if theprevious point is equal to the current point - 1, then we have no choice but to accep tthe current point
+            if (previousPoint == WorldPalette::brushStrokes[i - 1]) {
+                finalPoints.push_back(WorldPalette::brushStrokes[i]);
+                previousPoint = WorldPalette::brushStrokes[i];
+                continue;
+            }
+            else {
+                finalPoints.push_back(WorldPalette::brushStrokes[i - 1]);
+                previousPoint = WorldPalette::brushStrokes[i - 1];
+                continue;
+            }
+        
+        }
+    }
+
+    // now, we want to delete all the geometry inside the circles that make up the path
+    for (vec3& point : finalPoints) {
+        printVec3(MString("Point on path: "), point);
+        std::vector<SceneObject> geomToDelete;
+        findSceneObjects(geomToDelete, st, brushWidth, h, min, min, point); // find the objects within the selection region
+        for (SceneObject geom : geomToDelete) {
+            MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
+            MGlobal::executeCommand("delete"); // Delete the geometry
+        }
+    }
+
+    // NOTE: ^^^ IF WE KEEP THE ABOVE CODE, IT'S A COOL ERASER TOOL
+
+    // now, we want to generate new geometry inside the circles
+    for (vec3& point : finalPoints) {
+        // first, we specify the circle of influence to be 
+        float influenceRadius = brushWidth / 2;
+
+        // then we find all the objects that are in our region
+        std::vector<SceneObject> objectsInInfluence;
+        for (SceneObject& o : generatedObjects) {
+            if (Distance(o.position, point) < brushWidth) {
+                SceneObject obj = o; // make a copy
+                obj.position = o.position - point; // we need to make sure the obj is in local space
+                objectsInInfluence.push_back(obj);
+            }
+        }
+
+        std::vector<SceneObject> result = metropolisHastingSampling(st, brushWidth, h, min, min, point, influenceRadius, objectsInInfluence);
+        // add the results to the final vector
+        for (SceneObject& r : result) {
+            r.position += point; // make sure it's in world position
+            generatedObjects.push_back(r);
+        }
+    }
+
+    printFloat(MString("number of generated elements"), generatedObjects.size());
+
+    // actually show the objects in maya
+    for (SceneObject& geom : generatedObjects) {
+        // Find the height of the geometry
+        float height = 0.f;
+        int triIdx = 0;
+        vec2 coords;
+        int res = WorldPalette::terrain.findHeight(height, triIdx, coords, geom.position);
+        if (res) {
+            geom.position[1] = height;
+        }
+        std::string com = ","; // comma
+        MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(geom.category)) + com
+            + std::to_string(geom.position[0]) + com + std::to_string(geom.position[1]) + com + std::to_string(geom.position[2]) + std::string(")")).c_str());
+    }
+
 }
 
 void WorldPalette::updatePriorityOrder(std::vector<int>& newOrder) {

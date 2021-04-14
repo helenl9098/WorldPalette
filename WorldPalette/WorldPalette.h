@@ -35,11 +35,12 @@ public:
 	int findIndexGivenCategory(CATEGORY c);
 
 	float calculateRatio(Distribution& tmpDist);
-	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
+	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, std::vector<SceneObject>& influenceObject); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
 	
 	// TO DO: add future editing operations here
 	void pasteDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index);
 	void moveDistribution(float dx, float dz);
+	void brushDistribution(float brushWidth);
 
 	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
 

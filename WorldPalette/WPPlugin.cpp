@@ -420,14 +420,14 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Save brush stroke position (if needed)
 	if (saveBrush) {
 		WorldPalette::brushStrokes.push_back(vec3(brushPos[0], 0, brushPos[1])); // push stroke center position
-		printVec2(MString("Saved stroke at position: "), brushPos);
+		//printVec2(MString("Saved stroke at position: "), brushPos);
 	}
 
 	// Use saved brush strokes, then reset the list
 	if (releaseBrush) {
-		// TO DO: Call function to use the strokes given width
+		worldPalette.brushDistribution(brushWidth);
 		WorldPalette::brushStrokes.clear(); // empty the stroke list
-		printString(MString("Brush released!"), "");
+		//printString(MString("Brush released!"), "");
 	}
 
 	// Check if we're saving/generating or pasting a distribution
