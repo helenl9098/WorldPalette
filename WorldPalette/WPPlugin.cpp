@@ -356,7 +356,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Update the geometry within selection region (if dpos is provided)
 	if (dpos[0] != 0 || dpos[1] != 0) {
-		// TO DO : Call function to update geometry position within region
+		worldPalette.moveDistribution(dpos[0], dpos[1]);
 	}
 
 	// checking arguments
@@ -386,8 +386,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	else {
 		if (width > 0) {
 			// Delete existing geometry in the region and paste new geometry
-			//worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
-			worldPalette.moveDistribution(0.f, 0.f);
+			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 		}
 	}
 	return status;

@@ -1,5 +1,6 @@
 #include "WorldPalette.h"
 #include <algorithm>
+#include "vec.h"
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
@@ -383,26 +384,36 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
-    // TO DO: Change this so it's not manually set 
-    dx = 1.f; 
-    dz = 0.f;
+    // TO DO: Change this so it's not manually set
+    currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
     for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
 
         MGlobal::executeCommand("select -r " + o.name); // Select the geometry
         MGlobal::executeCommand((std::string("move -r ") + std::to_string(dx) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(dz)).c_str()); // Select the geometry
-        
-        /*
+        MGlobal::executeCommand((std::string("showHidden ") + o.name.asChar()).c_str());
+
+        // account for surface normal: if surface normal is too steep, we 
         // Find the height of the geometry
+        vec3 wpos = currentlySelectedRegion.selectedRegion.position + o.position;
         float height = 0.f;
         int triIdx = 0;
         vec2 coords;
         int res = WorldPalette::terrain.findHeight(height, triIdx, coords, wpos);
         if (res) {
-            wpos[1] = height;
+            // set the y
+            //setAttr pSphere1.translateY 6
+            MGlobal::executeCommand((std::string("setAttr ") + o.name.asChar() + std::string(".translateY ") + std::to_string(height)).c_str());
         }
 
-        // set the y
-        MGlobal::executeCommand(setAttr "pSphere1.translateY" 6); */
+        // hide the object if the surface normal is too steep
+        vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
+        vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
+        float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
+        printFloat(MString("Diffuse Term: "), diffuseTerm);
+        if (diffuseTerm < NORM_FACTOR) {
+            printString(MString("Hiding Object: "), o.name);
+            MGlobal::executeCommand((std::string("hide ") + o.name.asChar()).c_str());
+        }
     }
 }
 

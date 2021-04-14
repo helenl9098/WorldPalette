@@ -6,9 +6,10 @@
 
 // used for DEBUG print statements
 #define DEBUG false
-#define NUM_BUCKETS 10
-#define NUM_ITERS 1000
-#define ELEMENT_BUFFER 8
+#define NUM_BUCKETS 10 // number of histogram buckets
+#define NUM_ITERS 1000 // number of random iterations
+#define ELEMENT_BUFFER 8 // number of elements we can at most delete or add
+#define NORM_FACTOR 0.7 // how steep we allow objects to be at (the lower, the steeper)
 
 void printFloat(MString caption, float f);
 
