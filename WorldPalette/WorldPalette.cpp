@@ -304,9 +304,26 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 result.pop_back();
             }
             else {
-                // we accept the new scene object
-                oldRatio = newRatio;
-                continue;
+                SceneObject last = result[result.size() - 1]; // most recently added scene object
+                if (last.category == CATEGORY::TREE && WorldPalette::terrain.isInitialized) {
+                    // Check for surface normal if the scene object is a tree
+                    vec3 worldPos = vec3(last.position[0], 0, last.position[2]) + pos;
+                    vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos);
+                    float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
+                    if (diffuseTerm < NORM_FACTOR) {
+                        // We do not accept the tree if terrain slope is too high at its location
+                        result.pop_back();
+                    }
+                    else {
+                        // We accept the tree
+                        oldRatio = newRatio;
+                        continue;
+                    }
+                } else {
+                    // We accept the new scene object
+                    oldRatio = newRatio;
+                    continue;
+                }
             }
         }
         else {
@@ -390,8 +407,8 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
-    currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
-    for (SceneObject& o : currentlySelectedRegion.selectedRegion.objects) {
+    //currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
+    for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
 
         MGlobal::executeCommand("select -r " + o.name); // Select the geometry
         MGlobal::executeCommand((std::string("move -r ") + std::to_string(dx) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(dz)).c_str()); // Select the geometry
@@ -410,12 +427,16 @@ void WorldPalette::moveDistribution(float dx, float dz) {
             MGlobal::executeCommand((std::string("setAttr ") + o.name.asChar() + std::string(".translateY ") + std::to_string(height)).c_str());
         }
 
-        // hide the object if the surface normal is too steep
-        vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
-        vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
-        float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
-        if (diffuseTerm < NORM_FACTOR) {
-            MGlobal::executeCommand((std::string("hide ") + o.name.asChar()).c_str());
+        // hide the object if the surface normal is too steep and object is a tree
+        if (o.category == CATEGORY::TREE && WorldPalette::terrain.isInitialized) {
+            vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
+            vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
+            float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
+            printFloat(MString("Diffuse Term: "), diffuseTerm);
+            if (diffuseTerm < NORM_FACTOR) {
+                printString(MString("Hiding Object: "), o.name);
+                MGlobal::executeCommand((std::string("hide ") + o.name.asChar()).c_str());
+            }
         }
     }
 }

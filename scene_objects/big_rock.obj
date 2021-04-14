@@ -146,8 +146,8 @@ vn 0.581420 0.794793 -0.173940
 vn 0.581420 0.794793 -0.173940
 vn 0.581420 0.794793 -0.173940
 s off
-g Rock
-usemtl big_rock:initialShadingGroup
+g big_rock:Rock
+usemtl lambert2SG
 f 2/1/1 12/2/2 13/3/3
 f 7/4/4 5/5/5 9/6/6
 f 13/3/7 14/7/8 15/8/9

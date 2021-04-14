@@ -21,12 +21,12 @@ double Terrain::distance2D(vec2 p0, vec2 p1)
 	return dist;
 }
 
-Terrain::Terrain() : name(MString("")), width(0), height(0), sub_width(0), sub_height(0)
+Terrain::Terrain() : isInitialized(false), name(MString("")), width(0), height(0), sub_width(0), sub_height(0)
 {
 
 }
 
-Terrain::Terrain(MString n, float w, float h, int sw, int sh) : name(n), width(w), height(h), sub_width(sw), sub_height(sh), offset(vec2(0, 0))
+Terrain::Terrain(MString n, float w, float h, int sw, int sh) : isInitialized(true), name(n), width(w), height(h), sub_width(sw), sub_height(sh), offset(vec2(0, 0))
 {
 	// Allocate space for tile points
 	for (int i = 0; i < sw; ++i) {
