@@ -473,7 +473,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 	
 	// Load MEL
 	MString loadPath = plugin.loadPath();
-	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");
 
 	// Create a WorldPalette directory under default workspace
 	MString wsp_path;
@@ -497,6 +496,9 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/icons\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/tree.png\" " + "\"" + loadPath + "/icons/tree.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/big_rock.png\" " + "\"" + loadPath + "/icons/big_rock.png\"");
+
+	// Execute MEL script
+	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");
 
 	return status;
 }
