@@ -477,7 +477,7 @@ void WorldPalette::brushDistribution(float brushWidth) {
 
     // now, we want to delete all the geometry inside the circles that make up the path
     for (vec3& point : finalPoints) {
-        printVec3(MString("Point on path: "), point);
+        //printVec3(MString("Point on path: "), point);
         std::vector<SceneObject> geomToDelete;
         findSceneObjects(geomToDelete, st, brushWidth, h, min, min, point); // find the objects within the selection region
         for (SceneObject geom : geomToDelete) {
