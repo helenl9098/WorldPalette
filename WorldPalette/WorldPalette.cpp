@@ -4,6 +4,7 @@
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
+std::vector<vec3> WorldPalette::brushStrokes; // initially an empty list
 
 WorldPalette::WorldPalette() {
 	printString(MString("Created World Palette Object"), MString(""));
