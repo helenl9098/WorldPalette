@@ -50,6 +50,8 @@
 #define kUpdateSceneGeometryHeightFlagLong "-uGeomHeight"
 
 // Move editing flags
+#define kStartMoveFlag "-sm"
+#define kStartMoveFlagLong "-startMove"
 #define kChangeInXFlag "-dx"
 #define kChangeInXFlagLong "-dxpos"
 #define kChangeInZFlag "-dz"
@@ -100,6 +102,7 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kTerrainSubdivisionHeightFlag, kTerrainSubdivisionHeightFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kUpdateSceneGeometryHeightFlag, kUpdateSceneGeometryHeightFlagLong, MSyntax::kString);
 
+	syntax.addFlag(kStartMoveFlag, kStartMoveFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kBoolean);
@@ -128,6 +131,7 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  int& terrainSubWidth,
 							  int& terrainSubHeight,
 							  MString& geomToMove,
+							  bool& startMove,
 							  vec2& dpos,
 							  bool& saveBrush,
 							  vec2& brushPos,
@@ -302,6 +306,12 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kUpdateSceneGeometryHeightFlagLong)) {
 		stat = parser.getFlagArgument(kUpdateSceneGeometryHeightFlagLong, 0, geomToMove);
 	}
+	if (parser.isFlagSet(kStartMoveFlag)) {
+		stat = parser.getFlagArgument(kStartMoveFlag, 0, startMove);
+	}
+	else if (parser.isFlagSet(kStartMoveFlagLong)) {
+		stat = parser.getFlagArgument(kStartMoveFlagLong, 0, startMove);
+	}
 	if (parser.isFlagSet(kChangeInXFlag)) {
 		stat = parser.getFlagArgument(kChangeInXFlag, 0, dpos[0]);
 	} else if (parser.isFlagSet(kChangeInXFlagLong)) {
@@ -372,6 +382,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	MString geomToMove("");
 
 	// Move editing stuff
+	bool startMove = false;
 	vec2 dpos = vec2(0, 0);
 
 	// Brush editing stuff
@@ -384,7 +395,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
 				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, 
-		        geomToMove, dpos, saveBrush, brushPos, releaseBrush, brushWidth);
+		        geomToMove, startMove, dpos, saveBrush, brushPos, releaseBrush, brushWidth);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
@@ -393,16 +404,19 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
+		return status;
 	}
 
 	// Initialize terrain (if needed)
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
 		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
+		return status;
 	}
 	// Uninitialize terrain (if needed)
 	if (uninitializeTerrain) {
 		WorldPalette::terrain = Terrain();
+		return status;
 	}
 
 	// Move scene geometry to terrain height (if needed)
@@ -418,6 +432,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		if (res) {
 			MGlobal::executeCommand((std::string("move -y ") + std::to_string(height)).c_str());
 		}
+		return status;
 	}
 
 	// Update selection region 3D position (if needed)
@@ -426,12 +441,16 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		WorldPalette::terrain.updateSelectionRegion();
 	}
 
+	// Start moving the distribution by first storing the geometry within it
+	if (startMove) {
+		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+		return status;
+	}
 	// Update the geometry within selection region (if dpos is provided)
 	if (dpos[0] != 0 || dpos[1] != 0) {
-		// Update the distribution first
-		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 		// Now, move the distribution
 		worldPalette.moveDistribution(dpos[0], dpos[1]);
+		return status;
 	}
 
 	// Save brush stroke position (if needed)

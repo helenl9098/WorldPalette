@@ -39,6 +39,7 @@ public:
 						int& terrainSubWidth,
 						int& terrainSubHeight,
 						MString& geomToMove,
+						bool& startMove,
 						vec2& dpos,
 						bool& saveBrush,
 						vec2& brushPos,

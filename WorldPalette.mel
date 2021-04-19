@@ -63,11 +63,34 @@ global proc deleteCurrentSelectRegion()
 {
     global int $selectionType;
     global string $selectionRegion[];
+
     // Delete current selection region (if there is one)
     if ($selectionType) {
         select -r $selectionRegion[0];
         delete;
         $selectionType = 0;
+
+        // We must also reset the move GUI tools related to this
+
+        // Selection region sliders
+        global int $isMoveDistributionActive;
+        global string $moveXSlider;
+        global string $moveZSlider;
+        global string $widthSlider;
+        global string $heightSlider;
+        global string $moveButton;
+        // Reset slider values
+        floatSliderGrp -e -v 0 $moveXSlider;
+        floatSliderGrp -e -v 0 $moveZSlider;
+        floatSliderGrp -e -v 1 $widthSlider;
+        floatSliderGrp -e -v 1 $heightSlider;
+        // Disable width/height sliders
+        floatSliderGrp -e -en false $widthSlider;
+        floatSliderGrp -e -en false $heightSlider;
+        // Stop moving the distribution immediately
+        $isMoveDistributionActive = false;
+        iconTextButton -e -l "Start Moving Distribution" $moveButton;
+
     }
 }
 
@@ -78,7 +101,12 @@ global proc makePlanarSelectRegion()
     global int $selectionType;
     global string $selectionLayer;
     global int $isTerrainLoaded;
-    int $res = 20; // plane resolution
+
+    // Selection region sliders
+    global string $widthSlider;
+    global string $heightSlider;
+
+    int $res = 10; // plane resolution
     if ($selectionType != 1) {
         // Create a 2-D selection bound from a plane
         $selectionRegion = `polyPlane -name "selectionRegion" -sw $res -sh $res`;
@@ -94,8 +122,10 @@ global proc makePlanarSelectRegion()
         if ($isTerrainLoaded) {
             WorldPalette -msr true;
         }
-        
         select -cl  ; // deselect
+        // Enable width & height sliders
+        floatSliderGrp -e -en true $widthSlider;
+        floatSliderGrp -e -en true $heightSlider;
     }
 }
 
@@ -106,7 +136,11 @@ global proc makeRadialSelectRegion()
     global int $selectionType;
     global string $selectionLayer;
     global int $isTerrainLoaded;
-    int $res = 20; // disk resolution
+
+    // Selection region width slider
+    global string $widthSlider;
+
+    int $res = 10; // disk resolution
     if ($selectionType != 2) {
         // Create a 2-D selection bound from a disc
         $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010 -sx $res -sz $res`;
@@ -121,8 +155,9 @@ global proc makeRadialSelectRegion()
         if ($isTerrainLoaded) {
             WorldPalette -msr true;
         }
-        
         select -cl  ; // deselect
+        // Enable width slider
+        floatSliderGrp -e -en true $widthSlider;
     }
 }
 
@@ -137,22 +172,16 @@ global proc focusOnCurrentSelection()
     }
 }
 
-global proc moveAlongAxis(float $val, int $axis, int $mode)
+global proc changeMoveStatus()
 {
-    global string $selectionRegion[];
-    global int $selectionType;
-    global int $isTerrainLoaded;
-    if ($selectionType) {
-        select -r $selectionRegion[0];
-        if ($axis == 0) {
-            // Add onto current X position
-            move -x ($val + (getAttr ($selectionRegion[0] + ".translateX")));
-        } else if ($axis == 1) {
-            // Add onto current Z position
-            move -z ($val + (getAttr ($selectionRegion[0] + ".translateZ")));
-        }
-        select -cl  ; // deselect
+    global int $isMoveDistributionActive;
+    global string $moveButton;
 
+    $isMoveDistributionActive = ! $isMoveDistributionActive; // revert status
+    if ($isMoveDistributionActive) {
+        iconTextButton -e -l "Stop Moving Distribution" $moveButton;
+        global string $selectionRegion[];
+        global int $selectionType;
         // Get region properties
         float $width = 0;
         float $height = 0;
@@ -164,83 +193,122 @@ global proc moveAlongAxis(float $val, int $axis, int $mode)
             $height = `polyPlane -q -h $selectionRegion`;
             $bb = `exactWorldBoundingBox $selectionRegion`;
             $wp = `xform -q -ws -t $selectionRegion`;
-            //WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         } else if ($selectionType == 2) {
             // RADIAL
             $width = `polyCylinder -q -r $selectionRegion[0]`;
             $bb = `exactWorldBoundingBox selectionRegion`;
             $wp = `xform -q -ws -t $selectionRegion`;
-           //WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         }
-        
-        // Mode
-        // 0: Move selection region
-        // 1: Move distribution within selection region
-        switch($mode) {
-            case 0:
-                // Map region vertices to terrain height (if there is terrain)
-                if ($isTerrainLoaded) {
-                    WorldPalette -msr true;
-                }
-                break;
-            case 1:
-                // Map region vertices to terrain height (if there is terrain)
-                if ($isTerrainLoaded) {
-                    if ($axis == 0) {
-                        WorldPalette -msr true -dx $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
-                    } else if ($axis == 1) {
-                        WorldPalette -msr true -dz $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
-                    }
-                } else {
-                    if ($axis == 0) {
-                        WorldPalette -dx $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
-                    } else if ($axis == 1) {
-                        WorldPalette -dz $val -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
-                    }
-                }
-                break;
-            default:
-                break;
-        }
+        // Set current distribution on the C++ side (aka get the list of geoms inside the selection region)
+        WorldPalette -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
+    } else {
+        iconTextButton -e -l "Start Moving Distribution" $moveButton;
     }
 }
 
-global proc scaleRegion(float $val, int $axis)
+global proc moveAlongAxis(int $axis)
 {
     global string $selectionRegion[];
     global int $selectionType;
     global int $isTerrainLoaded;
-    if ($selectionType == 1) {
+
+    // Selection region move sliders
+    global string $moveXSlider;
+    global string $moveZSlider;
+    global int $isMoveDistributionActive;
+
+    float $val = 0; // coordinate value
+    float $dx = 0; // change in x-position
+    float $dz = 0; // change in z-position
+    if ($selectionType) {
         select -r $selectionRegion[0];
         if ($axis == 0) {
-            float $width = `polyPlane -q -w $selectionRegion`;
-            if ($width + $val > 0) {
-                // increase/decrease width
-                setAttr ($selectionRegion[1] + ".width") ($width + $val);
-            }
+            // Add onto current X position
+            $val = `floatSliderGrp -q -v $moveXSlider`;
+            $dx = $val - (getAttr ($selectionRegion[0] + ".translateX"));
+            move -x $val;
         } else if ($axis == 1) {
-            float $height = `polyPlane -q -h $selectionRegion`;
-            if ($height + $val > 0) {
-                // increase/decrease height
-                setAttr ($selectionRegion[1] + ".height") ($height + $val);
-            }
+            // Add onto current Z position
+            $val = `floatSliderGrp -q -v $moveZSlider`;
+            $dz = $val - (getAttr ($selectionRegion[0] + ".translateZ"));
+            move -z $val;
         }
         select -cl  ; // deselect
-        // Map region vertices to terrain height
-        WorldPalette -msr true;
-    } else if ($selectionType == 2) {
-        select -r $selectionRegion[0];
-        if ($axis == 0) {
-            float $rad = `polyCylinder -q -r $selectionRegion[0]`;
-            if ($rad + $val > 0) {
-                // increase/decrease radius
-                setAttr ($selectionRegion[1] + ".radius") ($rad + $val);
+
+        // False: Move selection region
+        // True: Move distribution within selection region
+        if ($isMoveDistributionActive) {
+            // Map region vertices to terrain height (if there is terrain)
+            if ($isTerrainLoaded) {
+                if ($axis == 0) {
+                    WorldPalette -msr true -dx $dx;
+                } else if ($axis == 1) {
+                    WorldPalette -msr true -dz $dz;
+                }
+            } else {
+                if ($axis == 0) {
+                    WorldPalette -dx $dx;
+                } else if ($axis == 1) {
+                    WorldPalette -dz $dz;
+                }
+            }
+        } else {
+            // Map region vertices to terrain height (if there is terrain)
+            if ($isTerrainLoaded) {
+                WorldPalette -msr true;
             }
         }
+    }
+}
+
+global proc scaleRegion(int $axis)
+{
+    // Selection region state
+    global string $selectionRegion[];
+    global int $selectionType;
+    global int $isMoveDistributionActive;
+
+    // Selection region sliders
+    global string $widthSlider;
+    global string $heightSlider;
+
+    // Terrain state
+    global int $isTerrainLoaded;
+
+    float $width = 0; // width of region
+    float $height = 0; // height of region
+    if ($selectionType) {
+        if ($selectionType == 1) {
+            select -r $selectionRegion[0];
+            if ($axis == 0) {
+                $width = `floatSliderGrp -q -v $widthSlider`;
+                // increase/decrease width
+                setAttr ($selectionRegion[1] + ".width") ($width);
+            } else if ($axis == 1) {
+                $height = `floatSliderGrp -q -v $heightSlider`;
+                // increase/decrease height
+                setAttr ($selectionRegion[1] + ".height") ($height);
+            }
+        } else if ($selectionType == 2) {
+            select -r $selectionRegion[0];
+            if ($axis == 0) {
+                $width = `floatSliderGrp -q -v $widthSlider`;
+                // increase/decrease radius
+                setAttr ($selectionRegion[1] + ".radius") ($width);
+            }
+        }
+
         select -cl  ; // deselect
         // Map region vertices to terrain height (if there is terrain)
-        if ($isTerrainLoaded) {
-            WorldPalette -msr true;
+        // Also update the selection region for moving the distribution
+
+        // Get other region properties
+        float $bb[] = `exactWorldBoundingBox $selectionRegion`;
+        float $wp[] = `xform -q -ws -t $selectionRegion`;
+        if ($isMoveDistributionActive) {
+            WorldPalette -msr $isTerrainLoaded -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
+        } else {
+             WorldPalette -msr $isTerrainLoaded;
         }
     }
 }
@@ -353,6 +421,12 @@ global proc updatePalette()
 
 global proc loadDefaultScene()
 {
+    // We want to stop the distribution move tool because we're basically changing all scene geometry information
+    global int $isMoveDistributionActive;
+    global string $moveButton;
+    $isMoveDistributionActive = false;
+    iconTextButton -e -l "Start Moving Distribution" $moveButton;
+
     global int $numTerrainLoads;
     // Delete all geometry in the scene first
     string $objects[] = `listTransforms -geometry`;
@@ -632,10 +706,19 @@ global proc ShowGUI()
 {
     global int $isGUIOpen;
     // Get the necessary global variables
-    // Selection
+    // Selection region radio buttons
     global string $noSelect;
     global string $planarSelect;
     global string $radialSelect;
+
+    // Selection region attribute sliders
+    global int $isMoveDistributionActive;
+    global string $moveXSlider;
+    global string $moveZSlider;
+    global string $moveButton;
+    global string $widthSlider;
+    global string $heightSlider;
+
     global string $brushButton;
     global string $modeCollection;
     global int $selectionType;
@@ -659,15 +742,16 @@ global proc ShowGUI()
                         setParent ..;
                     setParent ..;
                 frameLayout -label "Move Selection";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 0)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 0)";
-                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 0)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 0)";
+                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 300;
+                        $moveXSlider = `floatSliderGrp -label "X Position" -w 300 -field true -min -50 -max 50 -s 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
+                        $moveZSlider = `floatSliderGrp -label "Z Position" -w 300 -field true -min -50 -max 50 -s 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
+                        $moveButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -al "center" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
                         setParent ..;
                     setParent ..;
                 frameLayout -label "Resize Selection";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Increase Width" -c "scaleRegion(0.5, 0)"; button -l "Decrease Width" -c "scaleRegion(-0.5, 0)";
-                        button -l "Increase Height" -c "scaleRegion(0.5, 1)"; button -l "Decrease Height" -c "scaleRegion(-0.5, 1)";
+                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 300;
+                        $widthSlider = `floatSliderGrp -label "Width" -en false -w 300 -field true -min 1 -max 10 -s 0.5 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
+                        $heightSlider = `floatSliderGrp -label "Height" -en false -w 300 -field true -min 1 -max 10 -s 0.5 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
                         setParent ..;
                     setParent ..;
                 frameLayout -label "Other Options";
@@ -681,11 +765,6 @@ global proc ShowGUI()
                     columnLayout -columnAttach "both" 5 -rowSpacing 10;
                         $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
                         button -l "Update Priority" -c updatePriority;
-                    setParent ..;
-                frameLayout -label "Move Distribution";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Move +X" -c "moveAlongAxis(1.0, 0, 1)"; button -l "Move -X" -c "moveAlongAxis(-1.0, 0, 1)";
-                        button -l "Move +Z" -c "moveAlongAxis(1.0, 1, 1)"; button -l "Move -Z" -c "moveAlongAxis(-1.0, 1, 1)";
                     setParent ..;
                 frameLayout -label "Palette";
                     rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
@@ -720,14 +799,40 @@ global proc ShowGUI()
                     setParent ..;
           
     // Find which radio button must be set active
+    global string $selectionRegion[];
     if ($selectionType) {
+        // Also update the selection region sliders
+        float $xval = `getAttr ($selectionRegion[0] + ".translateX")`;
+        float $zval = `getAttr ($selectionRegion[0] + ".translateZ")`;
+        floatSliderGrp -e -v $xval $moveXSlider;
+        floatSliderGrp -e -v $zval $moveZSlider;
         if ($selectionType == 1) {
-            radioCollection -edit -select $planarSelect $modeCollection; 
+            radioCollection -edit -select $planarSelect $modeCollection;
+            // Enable the width slider and update its value
+            floatSliderGrp -e -en true $widthSlider;
+            float $width = `polyPlane -q -w $selectionRegion`;
+            floatSliderGrp -e -v $width $widthSlider;
+            // Enable the height slider and update its value
+            floatSliderGrp -e -en true $heightSlider;
+            float $height = `polyPlane -q -h $selectionRegion`;
+            floatSliderGrp -e -v $height $heightSlider;
         } else if ($selectionType == 2) {
-            radioCollection -edit -select $radialSelect $modeCollection; 
+            radioCollection -edit -select $radialSelect $modeCollection;
+            // Enable the width slider and update its value
+            floatSliderGrp -e -en true $widthSlider;
+            float $width = `polyCylinder -q -r $selectionRegion[0]`;
+            floatSliderGrp -e -v $width $widthSlider;
         }
     } else {
-        radioCollection -edit -select $noSelect $modeCollection; 
+        radioCollection -edit -select $noSelect $modeCollection;
+        // Reset slider values
+        floatSliderGrp -e -v 0 $moveXSlider;
+        floatSliderGrp -e -v 0 $moveZSlider;
+        floatSliderGrp -e -v 1 $widthSlider;
+        floatSliderGrp -e -v 1 $heightSlider;
+        // Stop moving the distribution immediately
+        $isMoveDistributionActive = false;
+        iconTextButton -e -l "Start Moving Distribution" $moveButton;
     }
     // Append the items to priority order scroll in correct order
     fillPriority;
@@ -777,15 +882,42 @@ setParent $gMainWindow;
 // Set Y as up axis
 setUpAxis "y";
 
-// GUI Items
+/*
+    GUI Items
+*/
+
+// Selection region type radio buttons
 global string $noSelect;
 global string $planarSelect;
 global string $radialSelect;
-global string $brushButton;
 global string $modeCollection;
+
+// Selection region sliders
+global string $moveXSlider;
+global string $moveZSlider;
+global string $widthSlider;
+global string $heightSlider;
+
+// Move distribution
+global string $moveButton;
+
+// Brush
+global string $brushButton;
+
+// Priority
 global string $scrollPriority;
+
+// Palette
 global string $palette[];
-global int $isGUIOpen = false;
+
+/*
+    State Variables
+*/
+
+global int $isGUIOpen = false; // is the GUI window open?
+
+// Move Distribution
+global int $isMoveDistributionActive = false;
 
 // Terrain
 global int $isTerrainLoaded = false;
