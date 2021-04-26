@@ -34,7 +34,7 @@ global proc updatePriority()
     // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
     global int $priorityOrder[];
     // Send updated order to C++
-    WorldPalette -po $priorityOrder[0] $priorityOrder[1] $priorityOrder[2];
+    WorldPalette -po $priorityOrder[0] $priorityOrder[1] $priorityOrder[2] $priorityOrder[3];
 }
 
 global proc fillPriority()
@@ -42,16 +42,19 @@ global proc fillPriority()
     // IF WE ADD MORE CATEGORIES, WE MUST UPDATE THIS FUNCTION!!!
     global string $scrollPriority;
     global int $priorityOrder[];
-    for ($i = 0; $i < 3; $i++) {
+    for ($i = 0; $i < 4; $i++) {
         switch($priorityOrder[$i]) {
             case 0:
-                textScrollList -e -a "ROCK" $scrollPriority;
+                textScrollList -e -a "GRASS" $scrollPriority;
                 break;
             case 1:
-                textScrollList -e -a "TREE" $scrollPriority;
+                textScrollList -e -a "ROCK" $scrollPriority;
                 break;
             case 2:
-                textScrollList -e -a "HOUSE" $scrollPriority;
+                textScrollList -e -a "SHRUB" $scrollPriority;
+                break;
+            case 3:
+                textScrollList -e -a "TREE" $scrollPriority;
                 break;
             default:
                 break;
@@ -428,13 +431,18 @@ global proc loadDefaultScene()
     iconTextButton -e -l "Start Moving Distribution" $moveButton;
 
     global int $numTerrainLoads;
+    global string $treeName;
+    global string $rockName;
+    global string $shrubName;
+    global string $grassName;
+
     // Delete all geometry in the scene first
     string $objects[] = `listTransforms -geometry`;
     for ($geom in $objects) {
         if ($geom == "selectionRegion") {
             continue;
         }
-        if ($geom == "tree:Tree" || $geom == "big_rock:Rock") {
+        if ($geom == $treeName || $geom == $rockName || $geom == $shrubName || $geom == $grassName) {
             continue;
         }
         if ($geom == ("terrain" + $numTerrainLoads + ":pPlane1") || $geom == "terrain:pPlane1") {
@@ -444,17 +452,33 @@ global proc loadDefaultScene()
     }
     
     // Create a bunch of scene objects
-    int $numPrims = 8;
+    int $numPrims = 6;
     for ($i = 0; $i < $numPrims; $i++) {
-        int $t = 1;// trees
+        int $t = 3; // TREE
         float $rx = `rand -2 2`;
         float $rz = `rand -2 2`;
         addSceneGeometryAtLoc($t, $rx, 0, $rz);
     }
-    
-    int $numPrims2 = 40;
+
+    int $numPrims2 = 6;
     for ($i = 0; $i < $numPrims2; $i++) {
-        int $t = 0;//`rocks
+        int $t = 2; // SHRUB
+        float $rx = `rand -3 3`;
+        float $rz = `rand -3 3`;
+        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+    }
+
+    int $numPrims3 = 20;
+    for ($i = 0; $i < $numPrims3; $i++) {
+        int $t = 1; // ROCK
+        float $rx = `rand -4 4`;
+        float $rz = `rand -4 4`;
+        addSceneGeometryAtLoc($t, $rx, 0, $rz);
+    }
+    
+    int $numPrims4 = 40;
+    for ($i = 0; $i < $numPrims4; $i++) {
+        int $t = 0; // GRASS
         float $rx = `rand -5 5`;
         float $rz = `rand -5 5`;
         addSceneGeometryAtLoc($t, $rx, 0, $rz);
@@ -589,22 +613,40 @@ global proc brushRelease()
 
 global proc addSceneGeom(int $type)
 {
+    global string $treeName;
+    global string $rockName;
+    global string $shrubName;
+    global string $grassName;
+
     // This one generates the geometry at the origin
     switch($type) {
         case 0:
-            // ROCK
-            showHidden big_rock:Rock;
-            select -r big_rock:Rock;
+            // GRASS
+            showHidden $grassName;
+            select -r $grassName;
             duplicate -rr;
-            scale -x 0.5 -y 0.5 -z 0.5;
-            hide big_rock:Rock;
+            hide $grassName;
             break;
         case 1:
-            // TREE
-            showHidden tree:Tree;
-            select -r tree:Tree;
+            // ROCK
+            showHidden $rockName;
+            select -r $rockName;
             duplicate -rr;
-            hide tree:Tree;
+            hide $rockName;
+            break;
+        case 2:
+            // SHRUB
+            showHidden $shrubName;
+            select -r $shrubName;
+            duplicate -rr;
+            hide $shrubName;
+            break;
+        case 3:
+            // TREE
+            showHidden $treeName;
+            select -r $treeName;
+            duplicate -rr;
+            hide $treeName;
             break;
         default:
             break;
@@ -626,17 +668,111 @@ global proc addSceneGeometryAtLoc(int $type, float $wx, float $wy, float $wz)
 
 global proc importSceneOBJs()
 {
-    // Get the objects directory
-    string $ws = `workspace -q -fullName`;
-    string $objDir = $ws + "/WorldPalette/objects/";
+    // OBJ paths
+    global string $treeOBJ;
+    global string $rockOBJ;
+    global string $shrubOBJ;
+    global string $grassOBJ;
     
     // Import objects for tree and rock (UPDATE THIS FUNCTION IF MORE OBJECTS ARE SUPPORTED)
-    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "big_rock" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "big_rock.obj"); // ROCK
-    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "tree" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($objDir + "tree.obj"); // TREE
-    
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "rock" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $rockOBJ; // ROCK
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "tree" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $treeOBJ; // TREE
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "shrub" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $shrubOBJ; // SHRUB
+    file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "grass" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $grassOBJ; // GRASS
+
     // Hide these imported meshes
     hide tree:Tree;
-    hide big_rock:Rock;
+    hide rock:Rock;
+    hide shrub:Shrub;
+    hide grass:Grass;
+}
+
+global proc uploadUserTree()
+{
+    // Current tree OBJ path
+    global string $treeOBJ;
+    global string $treeName;
+    global int $numTreeLoads;
+
+    // Have user select a new file
+    string $opened = `fileDialog -dm "*.obj"`;
+    if (size($opened) > 0) {
+        // User selected a new tree OBJ file successfully - replace the default path
+        $treeOBJ = $opened;
+        // Replace the main hidden tree mesh to duplicate
+        delete $treeName;
+        $numTreeLoads += 1;
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "tree" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $treeOBJ; // TREE
+        $treeName = ("tree" + $numTreeLoads + ":Tree");
+        WorldPalette -setTreeOBJ $treeName;
+        hide $treeName;
+    }
+}
+
+global proc uploadUserRock()
+{
+    // Current rock OBJ path
+    global string $rockOBJ;
+    global string $rockName;
+    global int $numRockLoads;
+
+    // Have user select a new file
+    string $opened = `fileDialog -dm "*.obj"`;
+    if (size($opened) > 0) {
+        // User selected a new rock OBJ file successfully - replace the default path
+        $rockOBJ = $opened;
+        // Replace the main hidden rock mesh to duplicate
+        delete $rockName;
+        $numRockLoads += 1;
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "rock" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $rockOBJ; // ROCK
+        $rockName = ("rock" + $numRockLoads + ":Rock");
+        WorldPalette -setRockOBJ $rockName;
+        hide $rockName;
+    }
+}
+
+global proc uploadUserShrub()
+{
+    // Current shrub OBJ path
+    global string $shrubOBJ;
+    global string $shrubName;
+    global int $numShrubLoads;
+
+    // Have user select a new file
+    string $opened = `fileDialog -dm "*.obj"`;
+    if (size($opened) > 0) {
+        // User selected a new shrub OBJ file successfully - replace the default path
+        $shrubOBJ = $opened;
+        // Replace the main hidden shrub mesh to duplicate
+        delete $shrubName;
+        $numShrubLoads += 1;
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "shrub" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $shrubOBJ; // SHRUB
+        $shrubName = ("shrub" + $numShrubLoads + ":Shrub");
+        WorldPalette -setShrubOBJ $shrubName;
+        hide $shrubName;
+    }
+}
+
+global proc uploadUserGrass()
+{
+    // Current grass OBJ path
+    global string $grassOBJ;
+    global string $grassName;
+    global int $numGrassLoads;
+
+    // Have user select a new file
+    string $opened = `fileDialog -dm "*.obj"`;
+    if (size($opened) > 0) {
+        // User selected a new grass OBJ file successfully - replace the default path
+        $grassOBJ = $opened;
+        // Replace the main hidden grass mesh to duplicate
+        delete $grassName;
+        $numGrassLoads += 1;
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "grass" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $grassOBJ; // GRASS
+        $grassName = ("grass" + $numGrassLoads + ":Grass");
+        WorldPalette -setGrassOBJ $grassName;
+        hide $grassName;
+    }
 }
 
 global proc loadTerrain()
@@ -649,10 +785,9 @@ global proc loadTerrain()
         confirmDialog -t "Load Terrain" -m "There already exists a terrain. You must delete this existing terrain first." -b "OK" -icn "warning";
     } else {
         // Get the terrains directory
-        string $ws = `workspace -q -fullName`;
-        string $terDir = $ws + "/WorldPalette/terrains/";
+        global string $terrainOBJ;
         // For now we always import the same terrain (we only support terrain.obj for now)
-        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" ($terDir + "terrain.obj");
+        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $terrainOBJ;
         $numTerrainLoads += 1;
         if ($numTerrainLoads) {
             WorldPalette -tn ("terrain" + $numTerrainLoads + ":pPlane1") -tw 50 -th 50 -tsw 100 -tsh 100;
@@ -730,41 +865,38 @@ global proc ShowGUI()
     string $ws = `workspace -q -fullName`;
     string $iconDir = $ws + "/WorldPalette/icons/";
     // Create the GUI window
-    string $window = `window -title "WorldPalette GUI" -s 0 -cc closeWindow`;
+    string $window = `window -title "WorldPalette GUI" -s 0 -w 400 -cc closeWindow`;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
-                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 100 -columnWidth 2 100 -columnWidth 3 100 -cs 2 5 -cs 3 5;
+                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 125 -columnWidth 2 125 -columnWidth 3 125 -cs 2 10 -cs 3 10;
                         $modeCollection = `radioCollection`;
                         $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
-                        setParent ..;
                     setParent ..;
                 frameLayout -label "Move Selection";
-                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 300;
-                        $moveXSlider = `floatSliderGrp -label "X Position" -w 300 -field true -min -50 -max 50 -s 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
-                        $moveZSlider = `floatSliderGrp -label "Z Position" -w 300 -field true -min -50 -max 50 -s 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
-                        $moveButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -al "center" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
-                        setParent ..;
+                    rowColumnLayout -numberOfColumns 1 -co 1 "both" 5;
+                        $moveXSlider = `floatSliderGrp -label "X Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
+                        $moveZSlider = `floatSliderGrp -label "Z Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
+                        $moveButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
                     setParent ..;
                 frameLayout -label "Resize Selection";
-                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 300;
-                        $widthSlider = `floatSliderGrp -label "Width" -en false -w 300 -field true -min 1 -max 10 -s 0.5 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
-                        $heightSlider = `floatSliderGrp -label "Height" -en false -w 300 -field true -min 1 -max 10 -s 0.5 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
-                        setParent ..;
+                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
+                        $widthSlider = `floatSliderGrp -label "Width" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
+                        $heightSlider = `floatSliderGrp -label "Height" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
                     setParent ..;
                 frameLayout -label "Other Options";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Focus On Selection Region" -c focusOnCurrentSelection;
                         button -l "Save Selection to Palette" -c saveSelection;
-                        setParent ..;
                     setParent ..;
+            setParent $window;
             frameLayout -label "Distribution" -collapsable true;
                 frameLayout -label "Priority Order";
-                    columnLayout -columnAttach "both" 5 -rowSpacing 10;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 10 -ro 1 "top" 5;
                         $scrollPriority = `textScrollList -numberOfRows 3 -dcc reorderPriority`;
-                        button -l "Update Priority" -c updatePriority;
+                        button -l "Update Priority" -c updatePriority -h 25;
                     setParent ..;
                 frameLayout -label "Palette";
                     rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
@@ -779,24 +911,26 @@ global proc ShowGUI()
                     $palette[8] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
                     $palette[9] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
                     setParent ..;
+            setParent $window;
             frameLayout -label "Brush" -collapsable true;
-                rowColumnLayout -numberOfColumns 1 -columnWidth 1 300;
-                    $brushButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -al "center" -i "brush.png" -label "Use Brush" -c changeBrushStatus`;
-                setParent ..;
-                rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
+                    $brushButton = `iconTextButton -w 400 -h 50 -style "iconAndTextHorizontal" -al "center" -i "art3dPaint.png" -label "Use Brush" -c changeBrushStatus`;
+                rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
                     button -l "Increase Width" -c "changeBrushWidth(1)"; button -l "Decrease Width" -c "changeBrushWidth(0)";
-                setParent ..;
-                    
+            setParent $window;        
             frameLayout -label "Scene" -collapsable true;
                 frameLayout -label "Creation";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 145 -columnWidth 2 145 -rs 1 5 -cs 1 5 -cs 2 5;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Load Default Scene" -c loadDefaultScene;
                         button -l "Paste Distribution" -c pasteDistribution;
-                        // iconTextButton -st "iconAndTextHorizontal" -l "Add Tree" -i ($iconDir + "tree.png")-w 50 -h 50 -c "addSceneGeom(1)";
-                        // iconTextButton -st "iconAndTextHorizontal" -l "Add Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "addSceneGeom(0)";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Tree" -i ($iconDir + "tree.png") -w 50 -h 50 -c "uploadUserTree";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "uploadUserRock";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Shrub" -i ($iconDir + "shrub.png") -w 50 -h 50 -c "uploadUserShrub";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Grass" -i ($iconDir + "grass.png") -w 50 -h 50 -c "uploadUserGrass";
                         button -l "Load Terrain" -c loadTerrain;
                         button -l "Delete Terrain" -c deleteTerrain;
                     setParent ..;
+            setParent $window;
           
     // Find which radio button must be set active
     global string $selectionRegion[];
@@ -853,10 +987,22 @@ global proc resetState()
     global string $selectionLayer;
     global string $selectionMat;
     global int $isTerrainLoaded;
+
+    // OBJ load counters
     global int $numTerrainLoads;
+    global int $numTreeLoads;
+    global int $numRockLoads;
+    global int $numShrubLoads;
+    global int $numGrassLoads;
+
     // Reset terrain
     $isTerrainLoaded = false;
     $numTerrainLoads = -1;
+    // Reset scene OBJ counts
+    $numTreeLoads = 0;
+    $numRockLoads = 0;
+    $numShrubLoads = 0;
+    $numGrassLoads = 0;
     // Recreate the selection layer
     $selectionLayer = `createDisplayLayer -e -name "SelectionLayer"`;
     setAttr ($selectionLayer + ".displayType") 2; // We don't want the user to manipulate it
@@ -916,6 +1062,23 @@ global string $palette[];
 
 global int $isGUIOpen = false; // is the GUI window open?
 
+// OBJ paths (may be overwritten by user input)
+global string $treeOBJ;
+global string $rockOBJ;
+global string $shrubOBJ;
+global string $grassOBJ;
+global string $terrainOBJ;
+
+// Scene object import counts
+global int $numTreeLoads = 0;
+global int $numRockLoads = 0;
+global int $numShrubLoads = 0;
+global int $numGrassLoads = 0;
+global string $treeName;
+global string $rockName;
+global string $shrubName;
+global string $grassName;
+
 // Move Distribution
 global int $isMoveDistributionActive = false;
 
@@ -924,7 +1087,7 @@ global int $isTerrainLoaded = false;
 global int $numTerrainLoads = -1;
 
 // Priority Order
-global int $priorityOrder[] = { 2, 1, 0 }; // 0 = ROCK; 1 = TREE; 2 = HOUSE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
+global int $priorityOrder[] = { 3, 2, 1, 0 }; // 0 = GRASS; 1 = ROCK; 2 = SHRUB; 3 = TREE (UPDATE THIS IF MORE CATEGORIES ARE ADDED!)
 
 // Distribution Palette
 global int $numSlots = 10;
@@ -977,5 +1140,20 @@ $brushDragContext = `draggerContext -i1 "brush.png" -inz "brushInitialize" -fnz 
 // Reset the selection region and scene objects if a new scene is created
 scriptJob -event "SceneOpened" resetState;
 
-// Import scene onject meshes
+// Set up default OBJ paths
+string $ws = `workspace -q -fullName`;
+string $objDir = $ws + "/WorldPalette/objects/";
+$terrainOBJ = $ws + "/WorldPalette/terrains/terrain.obj";
+$treeOBJ = $objDir + "tree.obj";
+$rockOBJ = $objDir + "big_rock.obj";
+$shrubOBJ = $objDir + "shrub.obj";
+$grassOBJ = $objDir + "grass.obj";
+
+// Set up scene object names
+$treeName = "tree:Tree";
+$rockName = "rock:Rock";
+$shrubName = "shrub:Shrub";
+$grassName = "grass:Grass";
+
+// Import scene object meshes
 importSceneOBJs();

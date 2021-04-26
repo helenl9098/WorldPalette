@@ -18,7 +18,7 @@ float SelectedRegion::getArea() {
 }
 
 DATATYPE getType(CATEGORY c) {
-    if (c == CATEGORY::ROCK || c == CATEGORY::TREE || c == CATEGORY::HOUSE) {
+    if (c == CATEGORY::ROCK || c == CATEGORY::TREE || c == CATEGORY::SHRUB || c == CATEGORY::GRASS) {
         return DATATYPE::DISTRIBUTION;
     }
     else {
@@ -27,7 +27,7 @@ DATATYPE getType(CATEGORY c) {
 }
 
 LAYER getLayer(CATEGORY c) {
-    if (c == CATEGORY::ROCK || c == CATEGORY::TREE) {
+    if (c == CATEGORY::ROCK || c == CATEGORY::TREE || c == CATEGORY::SHRUB || c == CATEGORY::GRASS) {
         return LAYER::VEGETATION;
     }
     else {
@@ -120,7 +120,7 @@ void SelectedRegion::addSceneObjectsToVector() {
                     if (name == MString("selectionRegion")) {
                         continue;
                     }
-                    if (name == MString("tree:Tree") || name == MString("big_rock:Rock")) {
+                    if (name == WorldPalette::objNames[0] || name == WorldPalette::objNames[1] || name == WorldPalette::objNames[2] || name == WorldPalette::objNames[3]) {
                         continue;
                     }
                     if (name == WorldPalette::terrain.name) {
@@ -143,7 +143,7 @@ void SelectedRegion::addSceneObjectsToVector() {
                         }
                     }
                     else if (this->selectionType == SelectionType::RADIAL) {
-                        if (Distance(vec3(trans[0], trans[1], trans[2]), this->position) < this->radius) {
+                        if (Distance(vec3(trans[0], 0, trans[2]), this->position) < this->radius) {
 
                             // the object is in the bounding box!
                             objectInRegion = true;
@@ -166,8 +166,11 @@ void SelectedRegion::addSceneObjectsToVector() {
                         else if (objectName.find("Rock") != std::string::npos) {
                             obj.category = CATEGORY::ROCK;
                         }
+                        else if (objectName.find("Shrub") != std::string::npos) {
+                            obj.category = CATEGORY::SHRUB;
+                        }
                         else {
-                            obj.category = CATEGORY::HOUSE;
+                            obj.category = CATEGORY::GRASS;
                         }
                         obj.layer = getLayer(obj.category);
                         obj.datatype = getType(obj.category);
@@ -335,8 +338,7 @@ void Distribution::calculateHistograms(float radius) {
         std::vector<std::pair<CATEGORY, std::vector<float>>> currentCategoryHistograms;
         for (int y = 0; y < x + 1; y++) {
             CATEGORY dependentCategory = priorityList[y];
-            // TO DO: Check the dependent category's type. For now, we assume it's always distribution
-            DATATYPE dependentType = DATATYPE::DISTRIBUTION;
+            DATATYPE dependentType = getType(dependentCategory);
             
             // *****************************
             // 3. for each pair, depending on the dependent category's type, we generate histograms in a certain way

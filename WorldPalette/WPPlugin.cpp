@@ -33,6 +33,16 @@
 #define kIsGeneratingFlag "-ge" // true = use area for saving/generating, false = use area for pasting
 #define kIsGeneratingFlagLong "-isGenerating"
 
+// Scene OBJ name flags
+#define kSetTreeOBJFlag "-sto"
+#define kSetTreeOBJFlagLong "-setTreeOBJ"
+#define kSetShrubOBJFlag "-sso"
+#define kSetShrubOBJFlagLong "-setShrubOBJ"
+#define kSetRockOBJFlag "-sro"
+#define kSetRockOBJFlagLong "-setRockOBJ"
+#define kSetGrassOBJFlag "-sgo"
+#define kSetGrassOBJFlagLong "-setGrassOBJ"
+
 // Height visualization/terrain flags
 #define kTerrainNameFlag "-tn"
 #define kTerrainNameFlagLong "-terrainName"
@@ -90,9 +100,14 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kSelectionPaletteIndexFlag, kSelectionPaletteIndexFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kMoveSelectionRegionFlag, kMoveSelectionRegionFlagLong, MSyntax::kDouble);
 
-	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
+	syntax.addFlag(kPriorityOrderFlag, kPriorityOrderFlagLong, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble, MSyntax::kDouble); // UPDATE THIS IF MORE CATEGORIES ARE ADDED!!!
 
 	syntax.addFlag(kIsGeneratingFlag, kIsGeneratingFlagLong, MSyntax::kBoolean);
+
+	syntax.addFlag(kSetTreeOBJFlag, kSetTreeOBJFlagLong, MSyntax::kString);
+	syntax.addFlag(kSetShrubOBJFlag, kSetShrubOBJFlagLong, MSyntax::kString);
+	syntax.addFlag(kSetRockOBJFlag, kSetRockOBJFlagLong, MSyntax::kString);
+	syntax.addFlag(kSetGrassOBJFlag, kSetGrassOBJFlagLong, MSyntax::kString);
 
 	syntax.addFlag(kTerrainNameFlag, kTerrainNameFlagLong, MSyntax::kString);
 	syntax.addFlag(kUnitializeTerrainFlag, kUnitializeTerrainFlagLong, MSyntax::kBoolean);
@@ -123,6 +138,10 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  int& paletteIdx,
 	                          std::vector<int>& priOrder,
 							  bool& isGenerating,
+							  MString& treeOBJ,
+							  MString& shrubOBJ,
+							  MString& rockOBJ,
+							  MString& grassOBJ,
 							  bool& moveSelRegion,
 							  MString& terrainName,
 							  bool& uninitializeTerrain,
@@ -228,6 +247,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		priOrder.push_back((int) temp);
 		stat = parser.getFlagArgument(kPriorityOrderFlag, 2, temp);
 		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlag, 3, temp);
+		priOrder.push_back((int)temp);
 	}  else if (parser.isFlagSet(kPriorityOrderFlagLong))
 	{
 		int temp = 0;
@@ -237,6 +258,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		priOrder.push_back((int) temp);
 		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 2, temp);
 		priOrder.push_back((int) temp);
+		stat = parser.getFlagArgument(kPriorityOrderFlagLong, 3, temp);
+		priOrder.push_back((int)temp);
 	}
 	if (parser.isFlagSet(kIsGeneratingFlag)) 
 	{
@@ -244,6 +267,38 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kIsGeneratingFlagLong)) 
 	{
 		stat = parser.getFlagArgument(kIsGeneratingFlagLong, 0, isGenerating);
+	}
+	if (parser.isFlagSet(kSetTreeOBJFlag))
+	{
+		stat = parser.getFlagArgument(kSetTreeOBJFlag, 0, treeOBJ);
+	}
+	else if (parser.isFlagSet(kSetTreeOBJFlagLong))
+	{
+		stat = parser.getFlagArgument(kSetTreeOBJFlagLong, 0, treeOBJ);
+	}
+	if (parser.isFlagSet(kSetShrubOBJFlag))
+	{
+		stat = parser.getFlagArgument(kSetShrubOBJFlag, 0, shrubOBJ);
+	}
+	else if (parser.isFlagSet(kSetShrubOBJFlagLong))
+	{
+		stat = parser.getFlagArgument(kSetShrubOBJFlagLong, 0, shrubOBJ);
+	}
+	if (parser.isFlagSet(kSetRockOBJFlag))
+	{
+		stat = parser.getFlagArgument(kSetRockOBJFlag, 0, rockOBJ);
+	}
+	else if (parser.isFlagSet(kSetRockOBJFlagLong))
+	{
+		stat = parser.getFlagArgument(kSetRockOBJFlagLong, 0, rockOBJ);
+	}
+	if (parser.isFlagSet(kSetGrassOBJFlag))
+	{
+		stat = parser.getFlagArgument(kSetGrassOBJFlag, 0, grassOBJ);
+	}
+	else if (parser.isFlagSet(kSetGrassOBJFlagLong))
+	{
+		stat = parser.getFlagArgument(kSetGrassOBJFlagLong, 0, grassOBJ);
 	}
 	if (parser.isFlagSet(kMoveSelectionRegionFlag))
 	{
@@ -369,6 +424,12 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	bool isSelRegionMoving = false; // did we move the selection region? (this is for updating region heights)
 	bool isGenerating = false; // is the passed in area for generating?
 
+	// Scene OBJ stuff
+	MString treeOBJ("");
+	MString shrubOBJ("");
+	MString rockOBJ("");
+	MString grassOBJ("");
+
 	// Priority order stuff
 	std::vector<int> priOrder;
 
@@ -393,7 +454,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
-				paletteIdx, priOrder, isGenerating, isSelRegionMoving,
+				paletteIdx, priOrder, isGenerating, 
+				treeOBJ, shrubOBJ, rockOBJ, grassOBJ, isSelRegionMoving,
 				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, 
 		        geomToMove, startMove, dpos, saveBrush, brushPos, releaseBrush, brushWidth);
 
@@ -405,6 +467,20 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
 		worldPalette.updatePriorityOrder(priOrder);
 		return status;
+	}
+
+	// Update scene object names (if needed)
+	if (treeOBJ.length() > 0) {
+		WorldPalette::objNames[3] = treeOBJ;
+	}
+	if (shrubOBJ.length() > 0) {
+		WorldPalette::objNames[2] = shrubOBJ;
+	}
+	if (rockOBJ.length() > 0) {
+		WorldPalette::objNames[1] = rockOBJ;
+	}
+	if (grassOBJ.length() > 0) {
+		WorldPalette::objNames[0] = grassOBJ;
 	}
 
 	// Initialize terrain (if needed)
@@ -522,6 +598,10 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/tree.mtl\" " + "\"" + loadPath + "/scene_objects/tree.mtl\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.obj\" " + "\"" + loadPath + "/scene_objects/big_rock.obj\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/big_rock.mtl\" " + "\"" + loadPath + "/scene_objects/big_rock.mtl\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/grass.obj\" " + "\"" + loadPath + "/scene_objects/grass.obj\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/grass.mtl\" " + "\"" + loadPath + "/scene_objects/grass.mtl\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/shrub.obj\" " + "\"" + loadPath + "/scene_objects/shrub.obj\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/shrub.mtl\" " + "\"" + loadPath + "/scene_objects/shrub.mtl\"");
 
 	// Copy the terrain files
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/terrains\"");
@@ -532,6 +612,8 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/icons\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/tree.png\" " + "\"" + loadPath + "/icons/tree.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/big_rock.png\" " + "\"" + loadPath + "/icons/big_rock.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/shrub.png\" " + "\"" + loadPath + "/icons/shrub.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/grass.png\" " + "\"" + loadPath + "/icons/grass.png\"");
 
 	// Execute MEL script
 	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");

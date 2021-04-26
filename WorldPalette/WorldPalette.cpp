@@ -2,8 +2,9 @@
 #include <algorithm>
 #include "vec.h"
 
-std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::HOUSE, CATEGORY::TREE, CATEGORY::ROCK }; // default order
+std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::TREE, CATEGORY::SHRUB, CATEGORY::ROCK,CATEGORY::GRASS }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
+std::vector<MString> WorldPalette::objNames = { "grass:Grass", "rock:Rock", "shrub:Shrub", "tree:Tree" };
 std::vector<vec3> WorldPalette::brushStrokes; // initially an empty list
 
 WorldPalette::WorldPalette() {
@@ -93,7 +94,7 @@ void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound,
                 if (name == MString("selectionRegion")) {
                     continue;
                 }
-                if (name == MString("tree:Tree") || name == MString("big_rock:Rock")) {
+                if (name == objNames[0] || name == objNames[1] || name == objNames[2] || name == objNames[3]) {
                     continue;
                 }
                 if (name == WorldPalette::terrain.name) {
@@ -116,7 +117,7 @@ void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound,
                     }
                 }
                 else if (st == SelectionType::RADIAL) {
-                    if (Distance(vec3(trans[0], trans[1], trans[2]), pos) < w) {
+                    if (Distance(vec3(trans[0], 0, trans[2]), pos) < w) {
 
                         // the object is in the bounding box!
                         objectInRegion = true;
@@ -305,8 +306,8 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             }
             else {
                 SceneObject last = result[result.size() - 1]; // most recently added scene object
-                if (last.category == CATEGORY::TREE && WorldPalette::terrain.isInitialized) {
-                    // Check for surface normal if the scene object is a tree
+                if (last.category != CATEGORY::ROCK && WorldPalette::terrain.isInitialized) {
+                    // Check for surface normal if the scene object is not a rock
                     vec3 worldPos = vec3(last.position[0], 0, last.position[2]) + pos;
                     vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos);
                     float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
@@ -428,8 +429,8 @@ void WorldPalette::moveDistribution(float dx, float dz) {
                 // set the y
                 MGlobal::executeCommand((std::string("setAttr ") + o.name.asChar() + std::string(".translateY ") + std::to_string(height)).c_str());
             }
-            // hide the object if the surface normal is too steep and object is a tree
-            if (o.category == CATEGORY::TREE) {
+            // hide the object if the surface normal is too steep and object is not a rock
+            if (o.category != CATEGORY::ROCK) {
                 vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
                 vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
                 float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));

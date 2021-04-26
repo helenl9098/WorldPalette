@@ -1,6 +1,6 @@
-newmtl big_rock:lambert2SG
+newmtl shrub:lambert3SG
 illum 4
-Kd 0.21 0.21 0.21
+Kd 0.14 0.36 0.06
 Ka 0.00 0.00 0.00
 Tf 1.00 1.00 1.00
 Ni 1.00

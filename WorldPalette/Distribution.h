@@ -15,7 +15,7 @@
 #include <string>  
 
 enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
-enum class CATEGORY { ROCK = 0, TREE = 1, HOUSE = 2}; // can add more later
+enum class CATEGORY { GRASS = 0, ROCK = 1, SHRUB = 2, TREE = 3}; // can add more later
 enum class DATATYPE { DISTRIBUTION, GRAPH, EXTERNAL }; // this is all the possibilities!
 
 DATATYPE getType(CATEGORY c);
@@ -27,7 +27,7 @@ struct SceneObject {
 	DATATYPE datatype; 
 	vec3 position; // this is the local position, as if the selected region is located at 0,0,0
 	MString name;
-	SceneObject() : layer(LAYER::VEGETATION), category(CATEGORY::HOUSE), datatype(DATATYPE::DISTRIBUTION), position(vec3()), name(MString()) {}
+	SceneObject() : layer(LAYER::VEGETATION), category(CATEGORY::GRASS), datatype(DATATYPE::DISTRIBUTION), position(vec3()), name(MString()) {}
 	SceneObject(LAYER l, CATEGORY c, DATATYPE d, vec3 p, MString n) : layer(l), category(c), datatype(d), position(p), name(n) {}
 };
 
