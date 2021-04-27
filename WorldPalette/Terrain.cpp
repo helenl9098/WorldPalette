@@ -162,77 +162,91 @@ int Terrain::findHeight(float& height, int& triIdx, vec2& coords, vec3 pos)
 		// Z out of bounds
 		return 0;
 	}
+
+	int searchRadius = 2;
+	// Using the search radius, account for tile deformations and find the actual overlapping tile
+	for (int i = coords[0] - searchRadius; i <= coords[0] + searchRadius; ++i) {
+		for (int j = coords[1] - searchRadius; j <= coords[1] + searchRadius; ++j) {
+			if (i < 0 || i >= sub_width || j < 0 || j >= sub_height) {
+				continue;
+			}
+			TerrainTile tile = tileMap[i][j];
+			// If the point is exactly on a tile point simply get the height
+			if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v1[0], tile.v1[2])) < THRESHOLD) {
+				triIdx = 1; // Intersection found with 1st triangle
+				height = tile.v1[1];
+				coords = vec2(i, j);
+				return 1;
+			}
+			if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v2[0], tile.v2[2])) < THRESHOLD) {
+				triIdx = 1; // Intersection found with 1st triangle
+				height = tile.v2[1];
+				coords = vec2(i, j);
+				return 1;
+			}
+			if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v3[0], tile.v3[2])) < THRESHOLD) {
+				triIdx = 1; // Intersection found with 1st triangle
+				height = tile.v3[1];
+				coords = vec2(i, j);
+				return 1;
+			}
+			if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v4[0], tile.v4[2])) < THRESHOLD) {
+				triIdx = 2; // Intersection found with 2nd triangle
+				height = tile.v4[1];
+				coords = vec2(i, j);
+				return 1;
+			}
+
+			// Find which half plane (triangle) the position intersects
+
+			// Triangle 1: v1, v2, v3
+			bool doesIsect = Terrain::isPointInTriangle(vec2(pos[0], pos[2]), vec2(tile.v1[0], tile.v1[2]),
+				vec2(tile.v2[0], tile.v2[2]), vec2(tile.v3[0], tile.v3[2]));
+			if (doesIsect) {
+				triIdx = 1; // Intersection found with 1st triangle
+				// Find the y-coordinate of intersection
+				// Get the plane equation
+				vec3 cp = (tile.v2 - tile.v1) ^ (tile.v3 - tile.v1); // cross product
+				cp.Normalize(); // normalize in place
+				// Find missing variable in equation
+				float d = -cp[0] * tile.v1[0] - cp[1] * tile.v1[1] - cp[2] * tile.v1[2];
+				// Solve equation for y
+				height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
+				coords = vec2(i, j);
+				return 1;
+			}
+			else {
+				// Triangle 2: v3, v4, v1
+				doesIsect = Terrain::isPointInTriangle(vec2(pos[0], pos[2]), vec2(tile.v3[0], tile.v3[2]),
+					vec2(tile.v4[0], tile.v4[2]), vec2(tile.v1[0], tile.v1[2]));
+				if (doesIsect) {
+					triIdx = 2; // Intersection found with 2nd triangle
+					// Find the y-coordinate of intersection
+					// Get the plane equation
+					vec3 cp = (tile.v4 - tile.v3) ^ (tile.v1 - tile.v3); // cross product
+					cp.Normalize(); // normalize in place
+					// Find missing variable in equation
+					float d = -cp[0] * tile.v3[0] - cp[1] * tile.v3[1] - cp[2] * tile.v3[2];
+					// Solve equation for y
+					height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
+					coords = vec2(i, j);
+					return 1;
+				}
+			}
+		}
+	}
+	// Something went wrong
 	TerrainTile tile = tileMap[coords[0]][coords[1]];
-
-	// If the point is exactly on a tile point simply get the height
-	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v1[0], tile.v1[2])) < THRESHOLD) {
-		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v1[1];
-		return 1;
-	}
-	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v2[0], tile.v2[2])) < THRESHOLD) {
-		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v2[1];
-		return 1;
-	}
-	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v3[0], tile.v3[2])) < THRESHOLD) {
-		triIdx = 1; // Intersection found with 1st triangle
-		height = tile.v3[1];
-		return 1;
-	}
-	if (Terrain::distance2D(vec2(pos[0], pos[2]), vec2(tile.v4[0], tile.v4[2])) < THRESHOLD) {
-		triIdx = 2; // Intersection found with 2nd triangle
-		height = tile.v4[1];
-		return 1;
-	}
-
-	// Find which half plane (triangle) the position intersects
-
-	// Triangle 1: v1, v2, v3
-	bool doesIsect = Terrain::isPointInTriangle(vec2(pos[0], pos[2]), vec2(tile.v1[0], tile.v1[2]),
-												vec2(tile.v2[0], tile.v2[2]), vec2(tile.v3[0], tile.v3[2]));
-	if (doesIsect) {
-		triIdx = 1; // Intersection found with 1st triangle
-		// Find the y-coordinate of intersection
-		// Get the plane equation
-		vec3 cp = (tile.v2 - tile.v1) ^ (tile.v3 - tile.v1); // cross product
-		cp.Normalize(); // normalize in place
-		// Find missing variable in equation
-		float d = -cp[0] * tile.v1[0] - cp[1] * tile.v1[1] - cp[2] * tile.v1[2];
-		// Solve equation for y
-		height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
-		return 1;
-	}
-	else {
-		// Triangle 2: v3, v4, v1
-		doesIsect = Terrain::isPointInTriangle(vec2(pos[0], pos[2]), vec2(tile.v3[0], tile.v3[2]),
-											   vec2(tile.v4[0], tile.v4[2]), vec2(tile.v1[0], tile.v1[2]));
-		if (doesIsect) {
-			triIdx = 2; // Intersection found with 2nd triangle
-			// Find the y-coordinate of intersection
-			// Get the plane equation
-			vec3 cp = (tile.v4 - tile.v3) ^ (tile.v1 - tile.v3); // cross product
-			cp.Normalize(); // normalize in place
-			// Find missing variable in equation
-			float d = -cp[0] * tile.v3[0] - cp[1] * tile.v3[1] - cp[2] * tile.v3[2];
-			// Solve equation for y
-			height = (-cp[0] * pos[0] - cp[2] * pos[2] - d) / cp[1];
-			return 1;
-		}
-		else {
-			// Something went wrong
-			printString(MString("Selection region height: "), MString("Something went wrong."));
-			// Print more information
-			printVec3(MString("Current point: "), pos);
-			printVec2(MString("Tile coordinates: "), coords);
-			printVec3(MString("Tile v1: "), tile.v1);
-			printVec3(MString("Tile v2: "), tile.v2);
-			printVec3(MString("Tile v3: "), tile.v3);
-			printVec3(MString("Tile v4: "), tile.v4);
-			printString(MString(""), MString("\n"));
-			return 0;
-		}
-	}
+	printString(MString("Selection region height: "), MString("Something went wrong."));
+	// Print more information
+	printVec3(MString("Current point: "), pos);
+	printVec2(MString("Tile coordinates: "), coords);
+	printVec3(MString("Tile v1: "), tile.v1);
+	printVec3(MString("Tile v2: "), tile.v2);
+	printVec3(MString("Tile v3: "), tile.v3);
+	printVec3(MString("Tile v4: "), tile.v4);
+	printString(MString(""), MString("\n"));
+	return 0;
 }
 
 void Terrain::updateSelectionRegion()

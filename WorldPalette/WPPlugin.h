@@ -45,6 +45,8 @@ public:
 						MString& geomToMove,
 						bool& startMove,
 						vec2& dpos,
+		                bool& startResize,
+		                vec2& dsize,
 						bool& saveBrush,
 						vec2& brushPos,
 						bool& releaseBrush,
