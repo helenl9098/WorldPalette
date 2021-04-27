@@ -1,6 +1,7 @@
 #include "WorldPalette.h"
 #include <algorithm>
 #include "vec.h"
+#include <maya/MItSelectionList.h>
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::TREE, CATEGORY::SHRUB, CATEGORY::ROCK,CATEGORY::GRASS }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
@@ -9,6 +10,10 @@ std::vector<vec3> WorldPalette::brushStrokes; // initially an empty list
 
 WorldPalette::WorldPalette() {
 	printString(MString("Created World Palette Object"), MString(""));
+    this->pasteUndo = false;
+    this->brushUndo = false;
+    this->eraseUndo = false;
+    this->clearUndo - false;
 }
 
 void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound, 
@@ -128,8 +133,26 @@ void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound,
 
                 // 4. if so, we create a scene object struct
                 if (objectInRegion) {
-                    // 5. fill in scene object struct (we only need the name)
+                    // 5. fill in scene object struct
                     SceneObject obj{};
+                    obj.position = vec3(trans[0], trans[1], trans[2]);
+
+                    // TO DO: ADD MORE IF MORE CATEGORIES
+                    std::string objectName = name.asChar();
+                    if (objectName.find("Tree") != std::string::npos) {
+                        obj.category = CATEGORY::TREE;
+                    }
+                    else if (objectName.find("Rock") != std::string::npos) {
+                        obj.category = CATEGORY::ROCK;
+                    }
+                    else if (objectName.find("Shrub") != std::string::npos) {
+                        obj.category = CATEGORY::SHRUB;
+                    }
+                    else {
+                        obj.category = CATEGORY::GRASS;
+                    }
+                    obj.layer = getLayer(obj.category);
+                    obj.datatype = getType(obj.category);
                     obj.name = name;
 
                     // 6. push scene object back in vector
@@ -237,7 +260,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     for (std::pair<CATEGORY, std::vector<SceneObject>> category : currentlySelectedRegion.sceneObjects) {
 
         float density = category.second.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-        int numElements = std::max(5.0f, ceil(density * pasteRegion.getArea()));
+        int numElements = std::max(3.0f, ceil(density * pasteRegion.getArea()));
 #if DEBUG
         printFloat(MString("Density: "), density);
         printFloat(MString("Original NumElements in Paste Area: "), numElements);
@@ -364,6 +387,164 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     return result;
 }
 
+void findSelectedObject(std::vector<MString>& addedGeometry) {
+    MStatus stat = MS::kSuccess;
+
+    // Since this class is derived off of MPxCommand, you can use the 
+    // inherited methods to return values and set error messages
+    //
+    MSelectionList selection;
+    MGlobal::getActiveSelectionList(selection);
+
+    MDagPath	dagPath;
+    MFnDagNode	dagNode;
+
+    MItSelectionList iter(selection);
+    for (; !iter.isDone(); iter.next())
+    {
+        iter.getDagPath(dagPath);
+        dagNode.setObject(dagPath);
+        addedGeometry.push_back(dagNode.name());
+        //printString(MString("Pasted Geometry: "), dagNode.name());
+    }
+};
+
+void WorldPalette::brushDistributionUndo() {
+    if (brushUndo) {
+        // do the undoing!
+        brushUndo = false;
+
+        // first we delete everything that was added by the brush
+        for (MString newObj : this->brushAddedObjects) {
+            MGlobal::executeCommand("select -r " + newObj); // Select the geometry
+            MGlobal::executeCommand("delete"); // Delete the geometry
+        }
+
+        // then we bring back everything that was replaced by the brush
+        std::string com = ","; // comma
+        for (std::pair<CATEGORY, vec3>& oldObj : this->brushOldGeometry) {
+            MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                + std::to_string(oldObj.second[0]) + com + std::to_string(oldObj.second[1]) + com + std::to_string(oldObj.second[2]) + std::string(")")).c_str());
+        }
+    }
+}
+
+void WorldPalette::eraseDistributionUndo() {
+    if (eraseUndo) {
+        // do the undoing!
+        eraseUndo = false;
+
+        // we bring back everything that was replaced by the paste
+        std::string com = ","; // comma
+        for (std::pair<CATEGORY, vec3>& oldObj : this->eraseOldGeometry) {
+            MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                + std::to_string(oldObj.second[0]) + com + std::to_string(oldObj.second[1]) + com + std::to_string(oldObj.second[2]) + std::string(")")).c_str());
+        }
+    }
+}
+
+void WorldPalette::eraseDistribution(float brushWidth) {
+    // first, we iterate through the list of stroke points to see which ones we want to sample (the less the better)
+    std::vector<vec3> finalPoints; // this is the list of the final points we want to draw IMPORTANT NOTE: THIS STORES OBJECTS IN WORLD POS
+    SelectionType st = SelectionType::RADIAL;
+    vec3 min = vec3(0, 0, 0);
+    float h = 0;
+
+    eraseUndo = true;
+    eraseOldGeometry.clear();
+
+    vec3 previousPoint;
+    for (int i = 0; i < WorldPalette::brushStrokes.size(); i++) {
+        // always add the first one
+        if (i == 0) {
+            finalPoints.push_back(WorldPalette::brushStrokes[i]);
+            previousPoint = WorldPalette::brushStrokes[i];
+            continue;
+        }
+        // add the furthest point that is approximately 1/2 brush width away from the last point
+        if (Distance(previousPoint, WorldPalette::brushStrokes[i]) > brushWidth / 2) {
+            // if theprevious point is equal to the current point - 1, then we have no choice but to accep tthe current point
+            if (previousPoint == WorldPalette::brushStrokes[i - 1]) {
+                finalPoints.push_back(WorldPalette::brushStrokes[i]);
+                previousPoint = WorldPalette::brushStrokes[i];
+                continue;
+            }
+            else {
+                finalPoints.push_back(WorldPalette::brushStrokes[i - 1]);
+                previousPoint = WorldPalette::brushStrokes[i - 1];
+                continue;
+            }
+
+        }
+    }
+
+    // now, we want to delete all the geometry inside the circles that make up the path
+    for (vec3& point : finalPoints) {
+        //printVec3(MString("Point on path: "), point);
+        std::vector<SceneObject> geomToDelete;
+        findSceneObjects(geomToDelete, st, brushWidth, h, min, min, point); // find the objects within the selection region
+        for (SceneObject geom : geomToDelete) {
+            MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
+            MGlobal::executeCommand("delete"); // Delete the geometry
+
+            // add to the undo vector so we can bring the geometry back if need be
+            eraseOldGeometry.push_back(std::pair<CATEGORY, vec3>(geom.category, geom.position));
+        }
+    }
+}
+
+void WorldPalette::clearDistributionUndo() {
+    if (clearUndo) {
+        // do the undoing!
+        clearUndo = false;
+
+        // we bring back everything that was replaced by the paste
+        std::string com = ","; // comma
+        for (std::pair<CATEGORY, vec3>& oldObj : this->clearOldGeometry) {
+            MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                + std::to_string(oldObj.second[0]) + com + std::to_string(oldObj.second[1]) + com + std::to_string(oldObj.second[2]) + std::string(")")).c_str());
+        }
+    }
+}
+
+void WorldPalette::clearDistribution() {
+    clearUndo = true;
+    clearOldGeometry.clear();
+
+    // First delete the existing geometry within the region
+    std::vector<SceneObject> geomToDelete;
+    findSceneObjects(geomToDelete, currentlySelectedRegion.selectedRegion.selectionType, currentlySelectedRegion.selectedRegion.width, 
+        currentlySelectedRegion.selectedRegion.height, currentlySelectedRegion.selectedRegion.minBounds, currentlySelectedRegion.selectedRegion.maxBounds,
+        currentlySelectedRegion.selectedRegion.position); // find the objects within the selection region
+    for (SceneObject& geom : geomToDelete) {
+        MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
+        MGlobal::executeCommand("delete"); // Delete the geometry
+
+        // add to the undo vector so we can bring the geometry back if need be
+        clearOldGeometry.push_back(std::pair<CATEGORY, vec3>(geom.category, geom.position));
+    }
+}
+
+void WorldPalette::pasteDistributionUndo() {
+    if (pasteUndo) {
+        // do the undoing!
+        pasteUndo = false;
+        
+        // first we delete everything that was added by the paste
+        for (MString newObj : this->pasteAddedObjects) {
+            MGlobal::executeCommand("select -r " + newObj); // Select the geometry
+            MGlobal::executeCommand("delete"); // Delete the geometry
+        }
+
+        // then we bring back everything that was replaced by the paste
+        std::string com = ","; // comma
+        for (std::pair<CATEGORY, vec3>& oldObj : this->pasteOldGeometry) {
+            MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                + std::to_string(oldObj.second[0]) + com + std::to_string(oldObj.second[1]) + com + std::to_string(oldObj.second[2]) + std::string(")")).c_str());
+        }
+    }
+}
+
 void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index) {
 
     // Do some error checks
@@ -372,11 +553,9 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
         return;
     }
     
-    /* TO DO: Figure out how to check this
-    if (!this->currentlySelectedRegion) {
-        printString(MString("Error: "), MString("Need example selection first!"));
-        return;
-    } */
+    pasteUndo = true;
+    pasteOldGeometry.clear();
+    pasteAddedObjects.clear();
 
 	// First delete the existing geometry within the region
 	std::vector<SceneObject> geomToDelete;
@@ -384,6 +563,9 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 	for (SceneObject& geom : geomToDelete) {
 		MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
 		MGlobal::executeCommand("delete"); // Delete the geometry
+
+        // add to the undo vector so we can bring the geometry back if need be
+        pasteOldGeometry.push_back(std::pair<CATEGORY, vec3>(geom.category, geom.position));
 	}
 
 	// Find the positions where the new geometry will be created
@@ -404,7 +586,20 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
         std::string com = ","; // comma
         MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(geom.category)) + com 
                                 + std::to_string(wpos[0]) + com + std::to_string(wpos[1]) + com + std::to_string(wpos[2]) + std::string(")")).c_str());
+        findSelectedObject(this->pasteAddedObjects);
 	}
+}
+
+void WorldPalette::moveDistributionSave() {
+    moveOldPosition = currentlySelectedRegion.selectedRegion.position;
+}
+
+void WorldPalette::moveDistributionUndo() {
+    vec3 changeInPosition = moveOldPosition - currentlySelectedRegion.selectedRegion.position;
+    // move the scene objects in the selection region
+    moveDistribution(changeInPosition[0], changeInPosition[2]);
+    // move the selection region
+    MGlobal::executeCommand((std::string("move -r ") + std::to_string(changeInPosition[0]) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(changeInPosition[2]) + std::string(" selectionRegion")).c_str());
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
@@ -453,6 +648,10 @@ void WorldPalette::brushDistribution(float brushWidth) {
     vec3 min = vec3(0, 0, 0);
     float h = 0;
 
+    brushUndo = true;
+    brushOldGeometry.clear();
+    brushAddedObjects.clear();
+
     vec3 previousPoint;
     for (int i = 0; i < WorldPalette::brushStrokes.size(); i++) {
         // always add the first one
@@ -486,6 +685,9 @@ void WorldPalette::brushDistribution(float brushWidth) {
         for (SceneObject geom : geomToDelete) {
             MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
             MGlobal::executeCommand("delete"); // Delete the geometry
+
+            // add to the undo vector so we can bring the geometry back if need be
+            brushOldGeometry.push_back(std::pair<CATEGORY, vec3>(geom.category, geom.position));
         }
     }
 
@@ -529,6 +731,8 @@ void WorldPalette::brushDistribution(float brushWidth) {
         std::string com = ","; // comma
         MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(geom.category)) + com
             + std::to_string(geom.position[0]) + com + std::to_string(geom.position[1]) + com + std::to_string(geom.position[2]) + std::string(")")).c_str());
+    
+        findSelectedObject(this->brushAddedObjects);
     }
 
 }

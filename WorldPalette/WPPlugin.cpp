@@ -362,10 +362,18 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		stat = parser.getFlagArgument(kUpdateSceneGeometryHeightFlagLong, 0, geomToMove);
 	}
 	if (parser.isFlagSet(kStartMoveFlag)) {
+		bool tmpMove = startMove;
 		stat = parser.getFlagArgument(kStartMoveFlag, 0, startMove);
+		if (startMove != tmpMove) {
+			worldPalette.moveDistributionSave();
+		}
 	}
 	else if (parser.isFlagSet(kStartMoveFlagLong)) {
+		bool tmpMove = startMove;
 		stat = parser.getFlagArgument(kStartMoveFlagLong, 0, startMove);
+		if (startMove != tmpMove) {
+			worldPalette.moveDistributionSave();
+		}
 	}
 	if (parser.isFlagSet(kChangeInXFlag)) {
 		stat = parser.getFlagArgument(kChangeInXFlag, 0, dpos[0]);
@@ -401,6 +409,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	}
 	return stat;
 }
+
+
 
 // Plugin doIt function
 MStatus WPPlugin::doIt(const MArgList& argList)
@@ -543,7 +553,6 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	}
 
 	// Check if we're saving/generating or pasting a distribution
-	// TO DO: We need to do some error checks! (like if w is < 0 etc)
 	if (isGenerating) {
 		if (width > 0) {
 			// Saving distribution
