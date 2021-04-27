@@ -143,7 +143,7 @@ global proc makeRadialSelectRegion()
     // Selection region width slider
     global string $widthSlider;
 
-    int $res = 10; // disk resolution
+    int $res = 20; // disk resolution
     if ($selectionType != 2) {
         // Create a 2-D selection bound from a disc
         $selectionRegion = `polyCylinder -name "selectionRegion" -height 0.010 -sx $res -sz $res`;
@@ -538,6 +538,7 @@ global proc loadDefaultScene()
     iconTextButton -e -l "Start Moving Distribution" $moveButton;
 
     global int $numTerrainLoads;
+    global string $terrainName;
     global string $treeName;
     global string $rockName;
     global string $shrubName;
@@ -552,7 +553,7 @@ global proc loadDefaultScene()
         if ($geom == $treeName || $geom == $rockName || $geom == $shrubName || $geom == $grassName) {
             continue;
         }
-        if ($geom == ("terrain" + $numTerrainLoads + ":pPlane1") || $geom == "terrain:pPlane1") {
+        if ($geom == $terrainName) {
             continue;
         }
         delete $geom;
@@ -590,6 +591,7 @@ global proc loadDefaultScene()
         float $rz = `rand -5 5`;
         addSceneGeometryAtLoc($t, $rx, 0, $rz);
     }
+    select -cl  ; // deselect
 }
 
 global proc pasteDistribution()
@@ -891,67 +893,29 @@ global proc loadTerrain()
         // There is already a terrain - user must delete it first
         confirmDialog -t "Load Terrain" -m "There already exists a terrain. You must delete this existing terrain first." -b "OK" -icn "warning";
     } else {
-        // Get the terrains directory
-        global string $terrainOBJ;
         global string $terrainName;
-        string $terName[];
-        // For now we always import the same terrain (we only support terrain.obj for now)
-        file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $terrainOBJ;
-        $numTerrainLoads += 1;
-        // Get terrain name
-        if ($numTerrainLoads) {
-            select -r ("terrain" + $numTerrainLoads + ":*");
-        } else {
-            select -r "terrain:*";
-        }
-        $terName = `ls -sl -tr`;
-        $terrainName = $terName[0];
-        print ("Terrain Name: " + $terrainName + "\n");
-        // Get the width, height and subdivision info
-        int $count[] = `polyEvaluate -v $terrainName`;
-        float $firstVertex[] = `xform -q -ws -t ($terrainName + ".vtx[0]")`;
-        float $width = $firstVertex[0] * 2;
-        if ($width < 0) {
-            $width = -$width;
-        }
-        float $height = $firstVertex[2] * 2;
-        if ($height < 0) {
-            $height = - $height;
-        }
-        int $subWidth = 0;
-        int $subHeight = 0;
-        float $prev_x = 0;
-        float $prev_z = 0;
-        for ($i = 0; $i < $count[0]; $i++) {
-            float $vertexPos[] = `xform -q -ws -t ($terrainName + ".vtx[" + $i + "]")`;
-            if ($prev_z != $vertexPos[2]) {
-                // new row
-                $subHeight += 1;
-                $subWidth = 0;
+        // Get the terrain directory - have user select the file
+        string $opened = `fileDialog -dm "terrain*.obj"`;
+        if (size($opened) > 0) {
+            // Update terrain file    
+            string $terName[];
+            file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $opened;
+            $numTerrainLoads += 1;
+            // Get terrain name
+            if ($numTerrainLoads) {
+                select -r ("terrain" + $numTerrainLoads + ":*");
+            } else {
+                select -r "terrain:*";
             }
-            if ($prev_x != $vertexPos[0]) {
-                $subWidth += 1;
+            $terName = `ls -sl -tr`;
+            $terrainName = $terName[0];
+            WorldPalette -tn $terrainName -tw 50 -th 50 -tsw 100 -tsh 100;
+            $isTerrainLoaded = true;
+            // Map selection region vertices to terrain height (if there is selection region)
+            if ($selectionType) {
+                WorldPalette -msr true;
             }
-            $prev_x = $vertexPos[0];
-            $prev_z = $vertexPos[2];
-        }
-
-        print ("Width: " + $width);
-        print "\n";
-        print ("Height: " + $height);
-        print "\n";
-        print ("Subwidth: " + ($subWidth - 1));
-        print "\n";
-        print ("Subheight: " + ($subHeight - 1));
-        print "\n";
-
-        //WorldPalette -tn $terrainName -tw $width -th $height -tsw ($subWidth - 1) -tsh ($subHeight- 1);
-        WorldPalette -tn $terrainName -tw 50 -th 50 -tsw 100 -tsh 100;
-
-        $isTerrainLoaded = true;
-        // Map selection region vertices to terrain height (if there is selection region)
-        if ($selectionType) {
-            WorldPalette -msr true;
+            select -cl;
         }
     }
 }
@@ -962,11 +926,8 @@ global proc deleteTerrain()
     global int $numTerrainLoads;
     global int $selectionType;
     if ($isTerrainLoaded) {
-        if ($numTerrainLoads) {
-            select -r ("terrain" + ($numTerrainLoads) + ":pPlane1");
-        } else {
-            select -r "terrain:pPlane1";
-        }
+        global string $terrainName;
+        select -r $terrainName;
         delete;
         $isTerrainLoaded = false;
         WorldPalette -ut true; // uninitialize terrain
@@ -1025,7 +986,7 @@ global proc ShowGUI()
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
-                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 125 -columnWidth 2 125 -columnWidth 3 125 -cs 2 10 -cs 3 10;
+                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 125 -columnWidth 2 125 -columnWidth 3 125 -cs 1 5 -cs 2 10 -cs 3 10;
                         $modeCollection = `radioCollection`;
                         $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
                         $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
@@ -1035,13 +996,16 @@ global proc ShowGUI()
                     rowColumnLayout -numberOfColumns 1 -co 1 "both" 5;
                         $moveXSlider = `floatSliderGrp -label "X Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
                         $moveZSlider = `floatSliderGrp -label "Z Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
-                        $moveButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
                     setParent ..;
                 frameLayout -label "Resize Selection";
                     rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
                         $widthSlider = `floatSliderGrp -label "Width" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
                         $heightSlider = `floatSliderGrp -label "Height" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
-                        $resizeButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Resizing Distribution" -c changeResizeStatus`;
+                    setParent ..;
+                frameLayout -label "Editing Tools";
+                    rowColumnLayout -numberOfColumns 2 -cw 1 200 -cw 2 200 -ro 1 "top" 5;
+                        $moveButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
+                        $resizeButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Resizing Distribution" -c changeResizeStatus`;
                     setParent ..;
                 frameLayout -label "Other Options";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
@@ -1056,12 +1020,14 @@ global proc ShowGUI()
                         button -l "Update Priority" -c updatePriority -h 25;
                     setParent ..;
                 frameLayout -label "Palette";
-                    rowColumnLayout -nc 2 -columnWidth 1 50 -columnWidth 2 50 -rs 1 5 -cs 1 5 -cs 2 5;
+                    rowColumnLayout -nc 6 -cw 1 50 -cw 2 50 -cw 3 50 -cw 4 50 -cw 5 50 -cw 6 100 -rs 1 5 -rs 2 5 -cs 1 5 -cs 2 5 -cs 3 5 -cs 4 5 -cs 5 5 -cs 6 15;
                     $palette[0] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
                     $palette[1] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
                     $palette[2] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
                     $palette[3] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
                     $palette[4] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
+                    iconTextButton -w 100 -h 50 -style "iconAndTextHorizontal" -i "Imprint.png" -label "Paste Distribution" -c pasteDistribution;
+                    //button -l "Paste Distribution" -c pasteDistribution -w 100;
                     $palette[5] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
                     $palette[6] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
                     $palette[7] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
@@ -1080,12 +1046,12 @@ global proc ShowGUI()
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
                         button -l "Load Default Scene" -c loadDefaultScene;
                         button -l "Paste Distribution" -c pasteDistribution;
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Tree" -i ($iconDir + "tree.png") -w 50 -h 50 -c "uploadUserTree";
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Rock" -i ($iconDir + "big_rock.png") -w 50 -h 50 -c "uploadUserRock";
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Shrub" -i ($iconDir + "shrub.png") -w 50 -h 50 -c "uploadUserShrub";
-                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Grass" -i ($iconDir + "grass.png") -w 50 -h 50 -c "uploadUserGrass";
-                        button -l "Load Terrain" -c loadTerrain;
-                        button -l "Delete Terrain" -c deleteTerrain;
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Tree" -i ($iconDir + "tree.png") -w 35 -h 35 -c "uploadUserTree";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Rock" -i ($iconDir + "big_rock.png") -w 35 -h 35 -c "uploadUserRock";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Shrub" -i ($iconDir + "shrub.png") -w 35 -h 35 -c "uploadUserShrub";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Grass" -i ($iconDir + "grass.png") -w 35 -h 35 -c "uploadUserGrass";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Load Terrain" -i ($iconDir + "terrain.png") -w 35 -h 35 -c "loadTerrain";
+                        iconTextButton -st "iconAndTextHorizontal" -l "Delete Terrain" -i ($iconDir + "terrain_delete.png") -w 35 -h 35 -c "deleteTerrain";
                     setParent ..;
             setParent $window;
           
@@ -1230,7 +1196,6 @@ global string $treeOBJ;
 global string $rockOBJ;
 global string $shrubOBJ;
 global string $grassOBJ;
-global string $terrainOBJ;
 
 // Scene object import counts
 global int $numTreeLoads = 0;
@@ -1310,7 +1275,6 @@ scriptJob -event "SceneOpened" resetState;
 // Set up default OBJ paths
 string $ws = `workspace -q -fullName`;
 string $objDir = $ws + "/WorldPalette/objects/";
-$terrainOBJ = $ws + "/WorldPalette/terrains/terrain.obj";
 $treeOBJ = $objDir + "tree.obj";
 $rockOBJ = $objDir + "big_rock.obj";
 $shrubOBJ = $objDir + "shrub.obj";

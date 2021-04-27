@@ -521,10 +521,6 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Initialize terrain (if needed)
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
-		printFloat(MString("Width: "), terrainWidth);
-		printFloat(MString("Height: "), terrainHeight);
-		printFloat(MString("Sub-width: "), terrainSubWidth);
-		printFloat(MString("Sub-height: "), terrainSubHeight);
 		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
 		return status;
 	}
@@ -653,17 +649,14 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/shrub.obj\" " + "\"" + loadPath + "/scene_objects/shrub.obj\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/objects/shrub.mtl\" " + "\"" + loadPath + "/scene_objects/shrub.mtl\"");
 
-	// Copy the terrain files
-	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/terrains\"");
-	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/terrains/terrain.obj\" " + "\"" + loadPath + "/scene_objects/terrain.obj\"");
-	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/terrains/terrain.mtl\" " + "\"" + loadPath + "/scene_objects/terrain.mtl\"");
-
 	// Copy the icon files
 	MGlobal::executeCommand("sysFile -makeDir \"" + w_palette_path + "/icons\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/tree.png\" " + "\"" + loadPath + "/icons/tree.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/big_rock.png\" " + "\"" + loadPath + "/icons/big_rock.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/shrub.png\" " + "\"" + loadPath + "/icons/shrub.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/grass.png\" " + "\"" + loadPath + "/icons/grass.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/terrain.png\" " + "\"" + loadPath + "/icons/terrain.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/terrain_delete.png\" " + "\"" + loadPath + "/icons/terrain_delete.png\"");
 
 	// Execute MEL script
 	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");
