@@ -67,6 +67,14 @@
 #define kChangeInZFlag "-dz"
 #define kChangeInZFlagLong "-dzpos"
 
+// Resize editing flags
+#define kStartResizeFlag "-sr"
+#define kStartResizeFlagLong "-startResize"
+#define kChangeInWidthFlag "-dw"
+#define kChangeInWidthFlagLong "-dWidth"
+#define kChangeInHeightFlag "-dh"
+#define kChangeInHeightFlagLong "-dHeight"
+
 // Brush editing flags
 #define kSaveBrushStrokeFlag "-sb"
 #define kSaveBrushStrokeFlagLong "-saveBrush"
@@ -120,6 +128,9 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kStartMoveFlag, kStartMoveFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kStartResizeFlag, kStartResizeFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kChangeInWidthFlag, kChangeInWidthFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kChangeInHeightFlag, kChangeInHeightFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kSaveBrushStrokePositionFlag, kSaveBrushStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kBoolean);
@@ -152,6 +163,8 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  MString& geomToMove,
 							  bool& startMove,
 							  vec2& dpos,
+							  bool& startResize,
+							  vec2& dsize,
 							  bool& saveBrush,
 							  vec2& brushPos,
 							  bool& releaseBrush,
@@ -377,6 +390,24 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kChangeInZFlagLong)) {
 		stat = parser.getFlagArgument(kChangeInZFlagLong, 0, dpos[1]);
 	}
+	if (parser.isFlagSet(kStartResizeFlag)) {
+		stat = parser.getFlagArgument(kStartResizeFlag, 0, startResize);
+	}
+	else if (parser.isFlagSet(kStartResizeFlagLong)) {
+		stat = parser.getFlagArgument(kStartResizeFlagLong, 0, startResize);
+	}
+	if (parser.isFlagSet(kChangeInWidthFlag)) {
+		stat = parser.getFlagArgument(kChangeInWidthFlag, 0, dsize[0]);
+	}
+	else if (parser.isFlagSet(kChangeInWidthFlagLong)) {
+		stat = parser.getFlagArgument(kChangeInWidthFlagLong, 0, dsize[0]);
+	}
+	if (parser.isFlagSet(kChangeInHeightFlag)) {
+		stat = parser.getFlagArgument(kChangeInHeightFlag, 0, dsize[1]);
+	}
+	else if (parser.isFlagSet(kChangeInHeightFlagLong)) {
+		stat = parser.getFlagArgument(kChangeInHeightFlagLong, 0, dsize[1]);
+	}
 	if (parser.isFlagSet(kSaveBrushStrokeFlag)) {
 		stat = parser.getFlagArgument(kSaveBrushStrokeFlag, 0, saveBrush);
 	} else if (parser.isFlagSet(kSaveBrushStrokeFlagLong)) {
@@ -446,6 +477,10 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	bool startMove = false;
 	vec2 dpos = vec2(0, 0);
 
+	// Resize editing stuff
+	bool startResize = false;
+	vec2 dsize = vec2(0, 0);
+
 	// Brush editing stuff
 	bool saveBrush = false;
 	vec2 brushPos;
@@ -456,8 +491,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, 
 				treeOBJ, shrubOBJ, rockOBJ, grassOBJ, isSelRegionMoving,
-				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, 
-		        geomToMove, startMove, dpos, saveBrush, brushPos, releaseBrush, brushWidth);
+				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
+				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
@@ -486,6 +521,10 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Initialize terrain (if needed)
 	if (terrainWidth != 0 && terrainHeight != 0 && terrainSubWidth != 0 && terrainSubHeight != 0) {
 		// Initialize terrain
+		printFloat(MString("Width: "), terrainWidth);
+		printFloat(MString("Height: "), terrainHeight);
+		printFloat(MString("Sub-width: "), terrainSubWidth);
+		printFloat(MString("Sub-height: "), terrainSubHeight);
 		WorldPalette::terrain = Terrain(terrainName, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight);
 		return status;
 	}
@@ -526,6 +565,17 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	if (dpos[0] != 0 || dpos[1] != 0) {
 		// Now, move the distribution
 		worldPalette.moveDistribution(dpos[0], dpos[1]);
+		return status;
+	}
+
+	// Start resizing the distribution by first storing the geometry within it
+	if (startResize) {
+		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+		return status;
+	}
+	// Update the geometry within selection region (if dsize is provided)
+	if (dsize[0] != 0 || dsize[1] != 0) {
+		// TO DO: RESIZING CODE GOES HERE
 		return status;
 	}
 

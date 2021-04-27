@@ -209,6 +209,40 @@ global proc changeMoveStatus()
     }
 }
 
+global proc changeResizeStatus()
+{
+    global int $isResizeDistributionActive;
+    global string $resizeButton;
+
+    $isResizeDistributionActive = ! $isResizeDistributionActive; // revert status
+    if ($isResizeDistributionActive) {
+        iconTextButton -e -l "Stop Resizing Distribution" $resizeButton;
+        global string $selectionRegion[];
+        global int $selectionType;
+        // Get region properties
+        float $width = 0;
+        float $height = 0;
+        float $bb[]; // bound box
+        float $wp[]; // world position
+        if ($selectionType == 1) {
+            // PLANAR
+            $width = `polyPlane -q -w $selectionRegion`;
+            $height = `polyPlane -q -h $selectionRegion`;
+            $bb = `exactWorldBoundingBox $selectionRegion`;
+            $wp = `xform -q -ws -t $selectionRegion`;
+        } else if ($selectionType == 2) {
+            // RADIAL
+            $width = `polyCylinder -q -r $selectionRegion[0]`;
+            $bb = `exactWorldBoundingBox selectionRegion`;
+            $wp = `xform -q -ws -t $selectionRegion`;
+        }
+        // Set current distribution on the C++ side (aka get the list of geoms inside the selection region)
+        WorldPalette -sr true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
+    } else {
+        iconTextButton -e -l "Start Resizing Distribution" $resizeButton;
+    }
+}
+
 global proc moveAlongAxis(int $axis)
 {
     global string $selectionRegion[];
@@ -264,6 +298,67 @@ global proc moveAlongAxis(int $axis)
     }
 }
 
+// Same function as moveAlongAxis except the region is moved with hotkeys instead
+global proc moveAlongAxisHotkey(int $axis, int $value) 
+{
+    /*global string $selectionRegion[];
+    global int $selectionType;
+    global int $isTerrainLoaded;
+
+    // Selection region move sliders
+    global string $moveXSlider;
+    global string $moveZSlider;
+    global int $isMoveDistributionActive;
+
+    float $val = 0; // coordinate value
+    float $dx = 0; // change in x-position
+    float $dz = 0; // change in z-position
+    if ($selectionType) {
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            // Add onto current X position
+            $val = (getAttr ($selectionRegion[0] + ".translateX"));
+            $dx = $value;
+            move -x ($val + $dx);
+            // Update the slider value as well
+            floatSliderGrp -e -v ($val + $dx) $moveXSlider;
+        } else if ($axis == 1) {
+            // Add onto current Z position
+            $val = (getAttr ($selectionRegion[0] + ".translateZ"));
+            $dz = $value;
+            move -z ($val + $dz);
+            // Update the slider value as well
+            floatSliderGrp -e -v ($val + $dz) $moveZSlider;
+        }
+        select -cl  ; // deselect
+
+        // False: Move selection region
+        // True: Move distribution within selection region
+        if ($isMoveDistributionActive) {
+            // Map region vertices to terrain height (if there is terrain)
+            if ($isTerrainLoaded) {
+                if ($axis == 0) {
+                    WorldPalette -msr true -dx $dx;
+                } else if ($axis == 1) {
+                    WorldPalette -msr true -dz $dz;
+                }
+            } else {
+                if ($axis == 0) {
+                    WorldPalette -dx $dx;
+                } else if ($axis == 1) {
+                    WorldPalette -dz $dz;
+                }
+            }
+        } else {
+            // Map region vertices to terrain height (if there is terrain)
+            if ($isTerrainLoaded) {
+                WorldPalette -msr true;
+            }
+        }
+    }*/
+    print $value;
+}
+
 global proc scaleRegion(int $axis)
 {
     // Selection region state
@@ -274,21 +369,26 @@ global proc scaleRegion(int $axis)
     // Selection region sliders
     global string $widthSlider;
     global string $heightSlider;
+    global int $isResizeDistributionActive;
 
     // Terrain state
     global int $isTerrainLoaded;
 
     float $width = 0; // width of region
     float $height = 0; // height of region
+    float $dw = 0; // change in width
+    float $dh = 0; // change in height
     if ($selectionType) {
         if ($selectionType == 1) {
             select -r $selectionRegion[0];
             if ($axis == 0) {
                 $width = `floatSliderGrp -q -v $widthSlider`;
+                $dw = $width - (getAttr ($selectionRegion[1] + ".width"));
                 // increase/decrease width
                 setAttr ($selectionRegion[1] + ".width") ($width);
             } else if ($axis == 1) {
                 $height = `floatSliderGrp -q -v $heightSlider`;
+                $dh = $height - (getAttr ($selectionRegion[1] + ".height"));
                 // increase/decrease height
                 setAttr ($selectionRegion[1] + ".height") ($height);
             }
@@ -296,22 +396,29 @@ global proc scaleRegion(int $axis)
             select -r $selectionRegion[0];
             if ($axis == 0) {
                 $width = `floatSliderGrp -q -v $widthSlider`;
+                $dw = $width - (getAttr ($selectionRegion[1] + ".radius"));
                 // increase/decrease radius
                 setAttr ($selectionRegion[1] + ".radius") ($width);
             }
         }
-
         select -cl  ; // deselect
-        // Map region vertices to terrain height (if there is terrain)
-        // Also update the selection region for moving the distribution
 
+        // False: Resize selection region
+        // True: Resize distribution within selection region
+        if ($isResizeDistributionActive) {
+            // Map region vertices to terrain height (if there is terrain)
+            WorldPalette -msr $isTerrainLoaded -dw $dw -dh $dh;
+        } else {
+            // Map region vertices to terrain height (if there is terrain)
+            WorldPalette -msr $isTerrainLoaded;
+        }
+
+        // Also update the selection region for moving the distribution
         // Get other region properties
         float $bb[] = `exactWorldBoundingBox $selectionRegion`;
         float $wp[] = `xform -q -ws -t $selectionRegion`;
         if ($isMoveDistributionActive) {
-            WorldPalette -msr $isTerrainLoaded -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
-        } else {
-             WorldPalette -msr $isTerrainLoaded;
+            WorldPalette -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
         }
     }
 }
@@ -786,14 +893,61 @@ global proc loadTerrain()
     } else {
         // Get the terrains directory
         global string $terrainOBJ;
+        global string $terrainName;
+        string $terName[];
         // For now we always import the same terrain (we only support terrain.obj for now)
         file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "terrain" -options "mo=1" -pr -importFrameRate true -importTimeRange "override" $terrainOBJ;
         $numTerrainLoads += 1;
+        // Get terrain name
         if ($numTerrainLoads) {
-            WorldPalette -tn ("terrain" + $numTerrainLoads + ":pPlane1") -tw 50 -th 50 -tsw 100 -tsh 100;
+            select -r ("terrain" + $numTerrainLoads + ":*");
         } else {
-            WorldPalette -tn "terrain:pPlane1" -tw 50 -th 50 -tsw 100 -tsh 100;
+            select -r "terrain:*";
         }
+        $terName = `ls -sl -tr`;
+        $terrainName = $terName[0];
+        print ("Terrain Name: " + $terrainName + "\n");
+        // Get the width, height and subdivision info
+        int $count[] = `polyEvaluate -v $terrainName`;
+        float $firstVertex[] = `xform -q -ws -t ($terrainName + ".vtx[0]")`;
+        float $width = $firstVertex[0] * 2;
+        if ($width < 0) {
+            $width = -$width;
+        }
+        float $height = $firstVertex[2] * 2;
+        if ($height < 0) {
+            $height = - $height;
+        }
+        int $subWidth = 0;
+        int $subHeight = 0;
+        float $prev_x = 0;
+        float $prev_z = 0;
+        for ($i = 0; $i < $count[0]; $i++) {
+            float $vertexPos[] = `xform -q -ws -t ($terrainName + ".vtx[" + $i + "]")`;
+            if ($prev_z != $vertexPos[2]) {
+                // new row
+                $subHeight += 1;
+                $subWidth = 0;
+            }
+            if ($prev_x != $vertexPos[0]) {
+                $subWidth += 1;
+            }
+            $prev_x = $vertexPos[0];
+            $prev_z = $vertexPos[2];
+        }
+
+        print ("Width: " + $width);
+        print "\n";
+        print ("Height: " + $height);
+        print "\n";
+        print ("Subwidth: " + ($subWidth - 1));
+        print "\n";
+        print ("Subheight: " + ($subHeight - 1));
+        print "\n";
+
+        //WorldPalette -tn $terrainName -tw $width -th $height -tsw ($subWidth - 1) -tsh ($subHeight- 1);
+        WorldPalette -tn $terrainName -tw 50 -th 50 -tsw 100 -tsh 100;
+
         $isTerrainLoaded = true;
         // Map selection region vertices to terrain height (if there is selection region)
         if ($selectionType) {
@@ -851,8 +1005,10 @@ global proc ShowGUI()
     global string $moveXSlider;
     global string $moveZSlider;
     global string $moveButton;
+    global int $isResizeDistributionActive;
     global string $widthSlider;
     global string $heightSlider;
+    global string $resizeButton;
 
     global string $brushButton;
     global string $modeCollection;
@@ -885,6 +1041,7 @@ global proc ShowGUI()
                     rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
                         $widthSlider = `floatSliderGrp -label "Width" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
                         $heightSlider = `floatSliderGrp -label "Height" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
+                        $resizeButton = `iconTextButton -w 300 -h 50 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Resizing Distribution" -c changeResizeStatus`;
                     setParent ..;
                 frameLayout -label "Other Options";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
@@ -967,6 +1124,9 @@ global proc ShowGUI()
         // Stop moving the distribution immediately
         $isMoveDistributionActive = false;
         iconTextButton -e -l "Start Moving Distribution" $moveButton;
+        // Stop resizing the distribution immediately
+        $isResizeDistributionActive = false;
+        iconTextButton -e -l "Start Resizing Distribution" $resizeButton;
     }
     // Append the items to priority order scroll in correct order
     fillPriority;
@@ -1047,6 +1207,9 @@ global string $heightSlider;
 // Move distribution
 global string $moveButton;
 
+// Resize distribution
+global string $resizeButton;
+
 // Brush
 global string $brushButton;
 
@@ -1082,7 +1245,11 @@ global string $grassName;
 // Move Distribution
 global int $isMoveDistributionActive = false;
 
+// Resize Distribution
+global int $isResizeDistributionActive = false;
+
 // Terrain
+global string $terrainName;
 global int $isTerrainLoaded = false;
 global int $numTerrainLoads = -1;
 
@@ -1155,5 +1322,18 @@ $rockName = "rock:Rock";
 $shrubName = "shrub:Shrub";
 $grassName = "grass:Grass";
 
+// Set the hotkeys
+/*runTimeCommand -commandLanguage "mel" -command ("print \"Hello\\n\"") moveSelRegionUp;
+nameCommand -annotation "Move Up" -command "moveSelRegionUp" moveSelRegionUpName;
+runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionDown;
+nameCommand -annotation "Move Down" -command " moveSelRegionDown" moveSelRegionDownName;
+runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionLeft;
+nameCommand -annotation "Move Left" -command " moveSelRegionLeft" moveSelRegionLeftName;
+runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionRight;
+nameCommand -annotation "Move Right" -command "moveSelRegionRight" moveSelRegionRightName;
+hotkey -k "Up" -sht -alt -name "moveSelRegionUpName";
+hotkey -k "Down" -sht -alt -name "moveSelRegionDownName";
+hotkey -k "Left" -sht -alt -name "moveSelRegionLeftName";
+hotkey -k "Right" -sht -alt -name "moveSelRegionRightName";*/
 // Import scene object meshes
 importSceneOBJs();
