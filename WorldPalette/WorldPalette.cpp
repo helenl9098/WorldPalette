@@ -249,7 +249,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     float buffer = 1.0; // we don't want to generate meshes right at the edge
 
     // 1. Create a empty selected region that will represent our area to paste into
-    SelectedRegion pasteRegion(SelectionType::NONE, w, h, min, max, pos);
+    SelectedRegion pasteRegion(SelectionType::NONE, w - influenceRadius, h, min, max, pos);
     pasteRegion.selectionType = st;
 
     // 2. Declare a vector of scene objects that will store the generated meshes
@@ -260,7 +260,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
     for (std::pair<CATEGORY, std::vector<SceneObject>> category : currentlySelectedRegion.sceneObjects) {
 
         float density = category.second.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-        int numElements = std::max(3.0f, ceil(density * pasteRegion.getArea()));
+        int numElements = std::max(1.0f, ceil(density * pasteRegion.getArea()));
 #if DEBUG
         printFloat(MString("Density: "), density);
         printFloat(MString("Original NumElements in Paste Area: "), numElements);
@@ -272,7 +272,7 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
         for (int i = 0; i < numElements; i++) {
             // make a random position in the region's bound
-            vec3 randLocalPos = getRandPosInRegion(st, w - buffer - influenceRadius, h - buffer - influenceRadius, pos);
+            vec3 randLocalPos = getRandPosInRegion(st, w - std::max(buffer, influenceRadius), h - std::max(buffer, influenceRadius), pos);
             MString name((std::string("NewSphere") + std::to_string(i)).c_str());
             CATEGORY assignedCat = category.first;
             result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
@@ -699,6 +699,7 @@ void WorldPalette::brushDistribution(float brushWidth) {
         float influenceRadius = brushWidth / 2;
 
         // then we find all the objects that are in our region
+        // std::map<CATEGORY, std::vector<SceneObject>> sceneObjects
         std::vector<SceneObject> objectsInInfluence;
         for (SceneObject& o : generatedObjects) {
             if (Distance(o.position, point) < brushWidth) {
