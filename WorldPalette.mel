@@ -324,7 +324,7 @@ global proc moveAlongAxis(int $axis)
 // Same function as moveAlongAxis except the region is moved with hotkeys instead
 global proc moveAlongAxisHotkey(int $axis, int $value) 
 {
-    /*global string $selectionRegion[];
+    global string $selectionRegion[];
     global int $selectionType;
     global int $isTerrainLoaded;
 
@@ -332,6 +332,10 @@ global proc moveAlongAxisHotkey(int $axis, int $value)
     global string $moveXSlider;
     global string $moveZSlider;
     global int $isMoveDistributionActive;
+
+    // Undo state
+    global int $canUndoMove;
+    global string $undoMoveButton;
 
     float $val = 0; // coordinate value
     float $dx = 0; // change in x-position
@@ -372,14 +376,16 @@ global proc moveAlongAxisHotkey(int $axis, int $value)
                     WorldPalette -dz $dz;
                 }
             }
+            // Update undo state
+            $canUndoMove = true;
+            iconTextButton -e -en true $undoMoveButton;
         } else {
             // Map region vertices to terrain height (if there is terrain)
             if ($isTerrainLoaded) {
                 WorldPalette -msr true;
             }
         }
-    }*/
-    print $value;
+    }
 }
 
 global proc scaleRegion(int $axis)
@@ -1655,17 +1661,16 @@ $shrubName = "shrub:Shrub";
 $grassName = "grass:Grass";
 
 // Set the hotkeys
-/*runTimeCommand -commandLanguage "mel" -command ("print \"Hello\\n\"") moveSelRegionUp;
-nameCommand -annotation "Move Up" -command "moveSelRegionUp" moveSelRegionUpName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionDown;
-nameCommand -annotation "Move Down" -command " moveSelRegionDown" moveSelRegionDownName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionLeft;
-nameCommand -annotation "Move Left" -command " moveSelRegionLeft" moveSelRegionLeftName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionRight;
-nameCommand -annotation "Move Right" -command "moveSelRegionRight" moveSelRegionRightName;
-hotkey -k "Up" -sht -alt -name "moveSelRegionUpName";
-hotkey -k "Down" -sht -alt -name "moveSelRegionDownName";
-hotkey -k "Left" -sht -alt -name "moveSelRegionLeftName";
-hotkey -k "Right" -sht -alt -name "moveSelRegionRightName";*/
+if (!`hotkeySet -ex WorldPaletteKeySet`) {
+    hotkeySet -current WorldPaletteKeySet; // Set current hotkey set
+}
+nameCommand -annotation "Move Region Up" -command "moveAlongAxisHotkey(0,1)" moveSelRegionUp;
+nameCommand -annotation "Move Region Down" -command "moveAlongAxisHotkey(0,-1)" moveSelRegionDown;
+nameCommand -annotation "Move Left" -command " moveAlongAxisHotkey(1,1)" moveSelRegionLeft;
+nameCommand -annotation "Move Right" -command "moveAlongAxisHotkey(1,-1)" moveSelRegionRight;
+hotkey -k "w" -sht -name "moveSelRegionUp";
+hotkey -k "s" -sht -name "moveSelRegionDown";
+hotkey -k "a" -sht -name "moveSelRegionLeft";
+hotkey -k "d" -sht -name "moveSelRegionRight";
 // Import scene object meshes
 importSceneOBJs();
