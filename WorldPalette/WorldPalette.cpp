@@ -13,7 +13,8 @@ WorldPalette::WorldPalette() {
     this->pasteUndo = false;
     this->brushUndo = false;
     this->eraseUndo = false;
-    this->clearUndo - false;
+    this->clearUndo = false;
+    this->resizeUndo = false;
 }
 
 void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound, 
@@ -225,6 +226,15 @@ vec3 getRandPosInRegion(SelectionType st, float w, float h, vec3 pos) {
     return vec3(0, 0, 0);
 }
 
+vec3 getRandPosInDonut(float w, float inner) {
+    float randR = (w - inner) * sqrt(static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) + inner;
+    float randTheta = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 2.f * M_PI;
+    float randW = randR * cos(randTheta);
+    float randH = randR * sin(randTheta);
+    vec3 randLocalPos(randW, 0, randH);
+    return randLocalPos;
+}
+
 float WorldPalette::calculateRatio(Distribution& tmpDist) {
     float newRatio = 0;
     for (int i = 0; i < currentlySelectedRegion.histograms.size(); i++) {
@@ -244,50 +254,73 @@ float WorldPalette::calculateRatio(Distribution& tmpDist) {
     return newRatio;
 }
 
-std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, std::vector<SceneObject>& influenceObjects) {
+std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, std::vector<SceneObject>& influenceObjects, 
+                                                                 bool resize, float dx, Distribution& unresizedDistribution) {
 
     float buffer = 1.0; // we don't want to generate meshes right at the edge
 
     // 1. Create a empty selected region that will represent our area to paste into
-    SelectedRegion pasteRegion(SelectionType::NONE, w, h, min, max, pos);
+    SelectedRegion pasteRegion(SelectionType::NONE, w - influenceRadius, h, min, max, pos);
     pasteRegion.selectionType = st;
 
     // 2. Declare a vector of scene objects that will store the generated meshes
     std::vector<SceneObject> result;
-
-
-    // 3. Initialize a random distribution depending on the density of the currently selected sample
-    for (std::pair<CATEGORY, std::vector<SceneObject>> category : currentlySelectedRegion.sceneObjects) {
-
-        float density = category.second.size() / this->currentlySelectedRegion.selectedRegion.getArea();
-        int numElements = std::max(3.0f, ceil(density * pasteRegion.getArea()));
-#if DEBUG
-        printFloat(MString("Density: "), density);
-        printFloat(MString("Original NumElements in Paste Area: "), numElements);
-#endif
-        if (numElements < 1) {
-            printString(MString("Error: "), MString("< 1 num elements in new area"));
-            return result;
-        }
-
-        for (int i = 0; i < numElements; i++) {
-            // make a random position in the region's bound
-            vec3 randLocalPos = getRandPosInRegion(st, w - buffer - influenceRadius, h - buffer - influenceRadius, pos);
-            MString name((std::string("NewSphere") + std::to_string(i)).c_str());
-            CATEGORY assignedCat = category.first;
-            result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
-        }
-    }
 
     // this is for brushing. If there are any objects in the influence circle, then we add them to the end result
     for (SceneObject& o : influenceObjects) {
         result.push_back(o);
     }
 
+    // 3. Initialize a random distribution depending on the density of the currently selected sample
+    if (resize) {
+        for (std::pair<CATEGORY, std::vector<SceneObject>> category : unresizedDistribution.sceneObjects) {
+
+            float density = category.second.size() / unresizedDistribution.selectedRegion.getArea();
+            int numElements = std::max(0.0f, ceil(density * pasteRegion.getArea() - currentlySelectedRegion.sceneObjects.at(category.first).size()));
+#if DEBUG
+            printFloat(MString("Density: "), density);
+            printFloat(MString("Original NumElements in Paste Area: "), numElements);
+#endif
+            for (int i = 0; i < numElements; i++) {
+                // make a random position in the region's bound
+                vec3 randLocalPos = getRandPosInDonut(w, w - resizeStartRadius);
+                    //getRandPosInRegion(st, w - std::max(buffer, influenceRadius), h - std::max(buffer, influenceRadius), pos);
+                MString name((std::string("NewSphere") + std::to_string(i)).c_str());
+                CATEGORY assignedCat = category.first;
+                result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
+            }
+        }
+    }
+    else {
+        for (std::pair<CATEGORY, std::vector<SceneObject>> category : currentlySelectedRegion.sceneObjects) {
+
+            float density = category.second.size() / this->currentlySelectedRegion.selectedRegion.getArea();
+            int numElements = std::max(1.0f, ceil(density * pasteRegion.getArea()));
+#if DEBUG
+            printFloat(MString("Density: "), density);
+            printFloat(MString("Original NumElements in Paste Area: "), numElements);
+#endif
+
+            for (int i = 0; i < numElements; i++) {
+                // make a random position in the region's bound
+                vec3 randLocalPos = getRandPosInRegion(st, w - std::max(buffer, influenceRadius), h - std::max(buffer, influenceRadius), pos);
+                MString name((std::string("NewSphere") + std::to_string(i)).c_str());
+                CATEGORY assignedCat = category.first;
+                result.push_back(SceneObject(getLayer(assignedCat), assignedCat, getType(assignedCat), randLocalPos, name));
+            }
+        }
+    }
+
     int numElements = result.size();
     // 5. Go through a fixed number of iterations
     pasteRegion.objects = result;
-    Distribution oldDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
+    Distribution oldDist;
+    if (resize) {
+        oldDist = Distribution(pasteRegion, resizeStartRadius); // calculate the histograms for the current distribution
+    }
+    else {
+        oldDist = Distribution(pasteRegion, currentlySelectedRegion.selectedRegion.width); // calculate the histograms for the current distribution
+    }
     float oldRatio = calculateRatio(oldDist);
 
     for (int i = 0; i < NUM_ITERS; i++) {
@@ -298,7 +331,10 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
             // Element Birth
             // --- a) add element at random location
-            vec3 randLocation = getRandPosInRegion(st, w - buffer - influenceRadius, h - buffer - influenceRadius, pos);
+            vec3 randLocation = getRandPosInRegion(st, w - std::max(buffer, influenceRadius), h - std::max(buffer, influenceRadius), pos);
+            if (resize) {
+                randLocation = getRandPosInDonut(w, w - resizeStartRadius);
+            }
 
             // --- b) assign a random category to it
             MString name((std::string("NewSphere") + std::to_string(result.size())).c_str());
@@ -317,6 +353,9 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
             // --- c) generate new histogram with this new element
             pasteRegion.objects = result;
             Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
+            if (resize) {
+                tmpDist = Distribution(pasteRegion, resizeStartRadius);
+            }
             float newRatio = calculateRatio(tmpDist);
 #if DEBUG
             printFloat(MString("Current Iteration: "), i);
@@ -354,7 +393,20 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
 
                 // Element Death
                 // --- a) select a random index to delete
-                int randIndex = rand() % result.size();
+            int randIndex;
+            randIndex = rand() % result.size();
+            
+            if (resize && influenceObjects.size() != 0) {
+                randIndex = rand() % (result.size() - influenceObjects.size()) + influenceObjects.size();
+                if (randIndex > result.size() - 1 || randIndex < 0) {
+                    printFloat("ERROR: WRONG INDEX ", randIndex);
+                    printFloat("Result Size: ", result.size());
+                    randIndex = result.size() - 1;
+                }
+            }
+            else {
+                randIndex = rand() % result.size();
+            }
 
                 // --- b) delete element (save tmp copy in case death is denied)
                 SceneObject tmpObj = result[randIndex];
@@ -363,6 +415,9 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 // --- c) generate new histogram with this new element removed
                 pasteRegion.objects = result;
                 Distribution tmpDist(pasteRegion, currentlySelectedRegion.selectedRegion.width); // this will automatically generate the histograms for us
+                if (resize) {
+                    tmpDist = Distribution(pasteRegion, resizeStartRadius);
+                }
                 float newRatio = calculateRatio(tmpDist);
 #if DEBUG
                 printFloat(MString("Current Iteration: "), i);
@@ -408,6 +463,142 @@ void findSelectedObject(std::vector<MString>& addedGeometry) {
         //printString(MString("Pasted Geometry: "), dagNode.name());
     }
 };
+
+MString returnSelectedObject() {
+    MStatus stat = MS::kSuccess;
+
+    // Since this class is derived off of MPxCommand, you can use the 
+    // inherited methods to return values and set error messages
+    //
+    MSelectionList selection;
+    MGlobal::getActiveSelectionList(selection);
+
+    MDagPath	dagPath;
+    MFnDagNode	dagNode;
+
+    MItSelectionList iter(selection);
+    for (; !iter.isDone(); iter.next())
+    {
+        iter.getDagPath(dagPath);
+        dagNode.setObject(dagPath);
+        return dagNode.name();
+    }
+};
+
+void WorldPalette::resizeDistributionSave(float width) {
+    this->resizeStartRadius = width;
+    this->resizeTmpDist = currentlySelectedRegion;
+}
+
+void WorldPalette::resizeDistribution(float dx, float dz) {
+    // update teh selection region
+    currentlySelectedRegion.selectedRegion.width += dx;
+    currentlySelectedRegion.selectedRegion.radius += dx;
+    currentlySelectedRegion.selectedRegion.height += dz;
+
+    // TO DO: Only accounting for dx at the moment
+    if (dx < 0) {
+        // we delete objects not in the geometry
+        std::vector<SceneObject> remainingGeometry;
+        for (SceneObject& o : this->currentlySelectedRegion.selectedRegion.objects) {
+            float distance = o.position.Length();
+            if (distance > currentlySelectedRegion.selectedRegion.width) {
+                MGlobal::executeCommand("delete " + o.name); // Delete the geometry
+                // add to the undo vector so we can bring the geometry back if need be
+                if (currentlySelectedRegion.selectedRegion.width < resizeStartRadius && distance < resizeStartRadius) {
+                    resizeOldGeometry.push_back(std::pair<CATEGORY, vec3>(o.category, o.position));
+                }
+            }
+            else {
+                remainingGeometry.push_back(o);
+            }
+        }
+        this->currentlySelectedRegion.selectedRegion.objects = remainingGeometry;
+        if (currentlySelectedRegion.selectedRegion.width >= resizeStartRadius) {
+            // bring back geometry that used to be there
+            std::string com = ","; // comma
+            std::vector<std::pair<CATEGORY, vec3>> tmpGeoms;
+            for (std::pair<CATEGORY, vec3>& oldObj : resizeOldGeometry) {
+                if (oldObj.second.Length() > currentlySelectedRegion.selectedRegion.width) {
+                    MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                        + std::to_string(oldObj.second[0] + currentlySelectedRegion.selectedRegion.position[0])
+                        + com + std::to_string(oldObj.second[1] + currentlySelectedRegion.selectedRegion.position[1])
+                        + com + std::to_string(oldObj.second[2] + currentlySelectedRegion.selectedRegion.position[2])
+                        + std::string(")")).c_str());
+                }
+                else {
+                    tmpGeoms.push_back(oldObj);
+                }
+            }
+            resizeOldGeometry = tmpGeoms;
+        }
+    }
+    else {
+        // we add objects
+        if (currentlySelectedRegion.selectedRegion.width < resizeStartRadius) {
+            // bring back geometry that used to be there
+            std::string com = ","; // comma
+            std::vector<std::pair<CATEGORY, vec3>> tmpGeoms;
+            for (std::pair<CATEGORY, vec3>& oldObj : resizeOldGeometry) {
+                if (oldObj.second.Length() < currentlySelectedRegion.selectedRegion.width) {
+                    MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(oldObj.first)) + com
+                        + std::to_string(oldObj.second[0] + currentlySelectedRegion.selectedRegion.position[0]) 
+                        + com + std::to_string(oldObj.second[1] + currentlySelectedRegion.selectedRegion.position[1])
+                        + com + std::to_string(oldObj.second[2] + currentlySelectedRegion.selectedRegion.position[2])
+                        + std::string(")")).c_str());
+                    this->currentlySelectedRegion.selectedRegion.objects.push_back(SceneObject(getLayer(oldObj.first), oldObj.first, getType(oldObj.first), oldObj.second, returnSelectedObject()));
+                }
+                else {
+                    tmpGeoms.push_back(oldObj);
+                }
+            }
+            resizeOldGeometry = tmpGeoms;
+        }
+        else {
+            // generate new geometry
+            this->currentlySelectedRegion.sortObjects();
+
+            // First delete the existing geometry within the region
+            std::vector<SceneObject> geomToDelete;
+            findSceneObjects(geomToDelete, currentlySelectedRegion.selectedRegion.selectionType, currentlySelectedRegion.selectedRegion.width, 
+                currentlySelectedRegion.selectedRegion.height, currentlySelectedRegion.selectedRegion.minBounds, 
+                currentlySelectedRegion.selectedRegion.maxBounds, currentlySelectedRegion.selectedRegion.position); // find the objects within the selection region
+            for (SceneObject& geom : geomToDelete) {
+                //if (geom.position.Length() > currentlySelectedRegion.selectedRegion.width - dx) {
+                    MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
+                    MGlobal::executeCommand("delete"); // Delete the geometry
+                if (geom.position.Length() > currentlySelectedRegion.selectedRegion.width - dx) {
+                    // add to the undo vector so we can bring the geometry back if need be
+                    resizeOldGeometry.push_back(std::pair<CATEGORY, vec3>(geom.category, geom.position));
+                }
+            }
+
+            // generate more geometry
+            std::vector<SceneObject> generatedGeometry = metropolisHastingSampling(currentlySelectedRegion.selectedRegion.selectionType, currentlySelectedRegion.selectedRegion.width,
+                        currentlySelectedRegion.selectedRegion.height, currentlySelectedRegion.selectedRegion.minBounds,
+                        currentlySelectedRegion.selectedRegion.maxBounds, currentlySelectedRegion.selectedRegion.position, 
+                        0.f, currentlySelectedRegion.selectedRegion.objects, true, dx, resizeTmpDist);
+
+            currentlySelectedRegion.selectedRegion.objects.clear();
+
+            // actually show the objects in maya
+            for (SceneObject& g : generatedGeometry) {
+                std::string com = ","; // comma
+                MGlobal::executeCommand((std::string("addSceneGeometryAtLoc(") + std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(g.category)) + com
+                    + std::to_string(g.position[0] + currentlySelectedRegion.selectedRegion.position[0]) + com + 
+                    std::to_string(g.position[1] + currentlySelectedRegion.selectedRegion.position[1]) + com + 
+                    std::to_string(g.position[2] + currentlySelectedRegion.selectedRegion.position[2]) + std::string(")")).c_str());
+
+                this->currentlySelectedRegion.selectedRegion.objects.push_back(SceneObject(getLayer(g.category), g.category, getType(g.category), g.position, returnSelectedObject()));
+                //findSelectedObject(this->brushAddedObjects);
+            }
+        }
+    }
+}
+
+void WorldPalette::resizeDistributionUndo() {
+
+}
 
 void WorldPalette::brushDistributionUndo() {
     if (brushUndo) {
@@ -570,7 +761,7 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 
 	// Find the positions where the new geometry will be created
     std::vector<SceneObject> empty;
-    std::vector<SceneObject> geomToPaste = metropolisHastingSampling(st, w, h, min, max, pos, 0, empty);
+    std::vector<SceneObject> geomToPaste = metropolisHastingSampling(st, w, h, min, max, pos, 0, empty, false, 0.f, currentlySelectedRegion);
 	
 	for (SceneObject& geom : geomToPaste) {
 		// Get the world position of the geometry
@@ -699,6 +890,7 @@ void WorldPalette::brushDistribution(float brushWidth) {
         float influenceRadius = brushWidth / 2;
 
         // then we find all the objects that are in our region
+        // std::map<CATEGORY, std::vector<SceneObject>> sceneObjects
         std::vector<SceneObject> objectsInInfluence;
         for (SceneObject& o : generatedObjects) {
             if (Distance(o.position, point) < brushWidth) {
@@ -708,7 +900,8 @@ void WorldPalette::brushDistribution(float brushWidth) {
             }
         }
 
-        std::vector<SceneObject> result = metropolisHastingSampling(st, brushWidth, h, min, min, point, influenceRadius, objectsInInfluence);
+        std::vector<SceneObject> result = metropolisHastingSampling(st, brushWidth, h, min, min, point, 
+            influenceRadius, objectsInInfluence, false, 0.f, currentlySelectedRegion);
         // add the results to the final vector
         for (SceneObject& r : result) {
             r.position += point; // make sure it's in world position

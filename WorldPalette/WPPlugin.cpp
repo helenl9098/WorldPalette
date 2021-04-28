@@ -677,11 +677,13 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	// Start resizing the distribution by first storing the geometry within it
 	if (startResize) {
 		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+		worldPalette.resizeDistributionSave(width);
 		return status;
 	}
+
 	// Update the geometry within selection region (if dsize is provided)
 	if (dsize[0] != 0 || dsize[1] != 0) {
-		// TO DO: RESIZING CODE GOES HERE
+		worldPalette.resizeDistribution(dsize[0], dsize[1]);
 		return status;
 	}
 
