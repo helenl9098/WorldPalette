@@ -85,6 +85,34 @@
 #define kBrushWidthFlag "-bw"
 #define kBrushWidthFlagLong "-brushWidth"
 
+// Eraser editing flags
+#define kSaveEraserStrokeFlag "-se"
+#define kSaveEraserStrokeFlagLong "-saveEraser"
+#define kSaveEraserStrokePositionFlag "-sep"
+#define kSaveEraserStrokePositionFlagLong "-saveEraserPos"
+#define kReleaseEraserFlag "-re"
+#define kReleaseEraserFlagLong "-releaseEraser"
+#define kEraserWidthFlag "-ew"
+#define kEraserWidthFlagLong "-eraserWidth"
+
+// Clear flags
+#define kClearSelectionFlag "-csl"
+#define kClearSelectionFlagLong "-clearSelection"
+
+// Undo flags
+#define kMoveUndoFlag "-umv"
+#define kMoveUndoFlagLong "-undoMove"
+#define kResizeUndoFlag "-urs"
+#define kResizeUndoFlagLong "-undoResize"
+#define kPasteUndoFlag "-upt"
+#define kPasteUndoFlagLong "-undoPaste"
+#define kBrushUndoFlag "-ubr"
+#define kBrushUndoFlagLong "-undoBrush"
+#define kClearUndoFlag "-ucr"
+#define kClearUndoFlagLong "-undoClear"
+#define kEraseUndoFlag "-uer"
+#define kEraseUndoFlagLong "-undoErase"
+
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
 // Maya Plugin creator function
@@ -128,13 +156,30 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kStartMoveFlag, kStartMoveFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
+
 	syntax.addFlag(kStartResizeFlag, kStartResizeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInWidthFlag, kChangeInWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInHeightFlag, kChangeInHeightFlagLong, MSyntax::kDouble);
+
 	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kSaveBrushStrokePositionFlag, kSaveBrushStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kBrushWidthFlag, kBrushWidthFlagLong, MSyntax::kDouble);
+
+	syntax.addFlag(kSaveEraserStrokeFlag, kSaveEraserStrokeFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kSaveEraserStrokePositionFlag, kSaveEraserStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
+	syntax.addFlag(kReleaseEraserFlag, kReleaseEraserFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kEraserWidthFlag, kEraserWidthFlagLong, MSyntax::kDouble);
+
+	syntax.addFlag(kClearSelectionFlag, kClearSelectionFlagLong, MSyntax::kBoolean);
+
+	syntax.addFlag(kMoveUndoFlag, kMoveUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kResizeUndoFlag, kResizeUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kPasteUndoFlag, kPasteUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kBrushUndoFlag, kBrushUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kClearUndoFlag, kClearUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kEraseUndoFlag, kEraseUndoFlagLong, MSyntax::kBoolean);
+
 	return syntax;
 }
 
@@ -168,7 +213,18 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  bool& saveBrush,
 							  vec2& brushPos,
 							  bool& releaseBrush,
-							  double& brushWidth)
+							  double& brushWidth,
+							  bool& saveEraser,
+							  vec2& eraserPos,
+							  bool& releaseEraser,
+							  double& eraserWidth,
+							  bool& clearSelection,
+							  bool& undoMove,
+							  bool& undoResize,
+							  bool& undoPaste,
+							  bool& undoBrush,
+							  bool& undoClear,
+							  bool& undoErase)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -438,10 +494,76 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kBrushWidthFlagLong)) {
 		stat = parser.getFlagArgument(kBrushWidthFlagLong, 0, brushWidth);
 	}
+	if (parser.isFlagSet(kSaveEraserStrokeFlag)) {
+		stat = parser.getFlagArgument(kSaveEraserStrokeFlag, 0, saveEraser);
+	}
+	else if (parser.isFlagSet(kSaveEraserStrokeFlagLong)) {
+		stat = parser.getFlagArgument(kSaveEraserStrokeFlagLong, 0, saveEraser);
+	}
+	if (parser.isFlagSet(kSaveEraserStrokePositionFlag)) {
+		stat = parser.getFlagArgument(kSaveEraserStrokePositionFlag, 0, eraserPos[0]);
+		stat = parser.getFlagArgument(kSaveEraserStrokePositionFlag, 1, eraserPos[1]);
+	}
+	else if (parser.isFlagSet(kSaveEraserStrokePositionFlagLong)) {
+		stat = parser.getFlagArgument(kSaveEraserStrokePositionFlagLong, 0, eraserPos[0]);
+		stat = parser.getFlagArgument(kSaveEraserStrokePositionFlagLong, 1, eraserPos[1]);
+	}
+	if (parser.isFlagSet(kReleaseEraserFlag)) {
+		stat = parser.getFlagArgument(kReleaseEraserFlag, 0, releaseEraser);
+	}
+	else if (parser.isFlagSet(kReleaseEraserFlagLong)) {
+		stat = parser.getFlagArgument(kReleaseEraserFlagLong, 0, releaseEraser);
+	}
+	if (parser.isFlagSet(kEraserWidthFlag)) {
+		stat = parser.getFlagArgument(kEraserWidthFlag, 0, eraserWidth);
+	}
+	else if (parser.isFlagSet(kEraserWidthFlagLong)) {
+		stat = parser.getFlagArgument(kEraserWidthFlagLong, 0, eraserWidth);
+	}
+	if (parser.isFlagSet(kClearSelectionFlag)) {
+		stat = parser.getFlagArgument(kClearSelectionFlag, 0, clearSelection);
+	}
+	else if (parser.isFlagSet(kClearSelectionFlagLong)) {
+		stat = parser.getFlagArgument(kClearSelectionFlagLong, 0, clearSelection);
+	}
+	if (parser.isFlagSet(kMoveUndoFlag)) {
+		stat = parser.getFlagArgument(kMoveUndoFlag, 0, undoMove);
+	}
+	else if (parser.isFlagSet(kMoveUndoFlagLong)) {
+		stat = parser.getFlagArgument(kMoveUndoFlagLong, 0, undoMove);
+	}
+	if (parser.isFlagSet(kResizeUndoFlag)) {
+		stat = parser.getFlagArgument(kResizeUndoFlag, 0, undoResize);
+	}
+	else if (parser.isFlagSet(kResizeUndoFlagLong)) {
+		stat = parser.getFlagArgument(kResizeUndoFlagLong, 0, undoResize);
+	}
+	if (parser.isFlagSet(kPasteUndoFlag)) {
+		stat = parser.getFlagArgument(kPasteUndoFlag, 0, undoPaste);
+	}
+	else if (parser.isFlagSet(kPasteUndoFlagLong)) {
+		stat = parser.getFlagArgument(kPasteUndoFlagLong, 0, undoPaste);
+	}
+	if (parser.isFlagSet(kBrushUndoFlag)) {
+		stat = parser.getFlagArgument(kBrushUndoFlag, 0, undoBrush);
+	}
+	else if (parser.isFlagSet(kBrushUndoFlagLong)) {
+		stat = parser.getFlagArgument(kBrushUndoFlagLong, 0, undoBrush);
+	}
+	if (parser.isFlagSet(kEraseUndoFlag)) {
+		stat = parser.getFlagArgument(kEraseUndoFlag, 0, undoErase);
+	}
+	else if (parser.isFlagSet(kEraseUndoFlagLong)) {
+		stat = parser.getFlagArgument(kEraseUndoFlagLong, 0, undoErase);
+	}
+	if (parser.isFlagSet(kClearUndoFlag)) {
+		stat = parser.getFlagArgument(kClearUndoFlag, 0, undoClear);
+	}
+	else if (parser.isFlagSet(kClearUndoFlagLong)) {
+		stat = parser.getFlagArgument(kClearUndoFlagLong, 0, undoClear);
+	}
 	return stat;
 }
-
-
 
 // Plugin doIt function
 MStatus WPPlugin::doIt(const MArgList& argList)
@@ -497,12 +619,31 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	bool releaseBrush = false;
 	double brushWidth;
 
+	// Eraser editing stuff
+	bool saveEraser = false;
+	vec2 eraserPos;
+	bool releaseEraser = false;
+	double eraserWidth;
+
+	// Clear selection stuff
+	bool clearSelection = false;
+
+	// Undo stuff
+	bool undoMove = false;
+	bool undoResize = false;
+	bool undoPaste = false;
+	bool undoBrush = false;
+	bool undoClear = false;
+	bool undoErase = false;
+
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, 
 				treeOBJ, shrubOBJ, rockOBJ, grassOBJ, isSelRegionMoving,
 				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
-				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth);
+				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth,
+				saveEraser, eraserPos, releaseEraser, eraserWidth, clearSelection,
+				undoMove, undoResize, undoPaste, undoBrush, undoClear, undoErase);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
