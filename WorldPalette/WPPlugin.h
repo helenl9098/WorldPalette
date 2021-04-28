@@ -50,6 +50,14 @@ public:
 						bool& saveBrush,
 						vec2& brushPos,
 						bool& releaseBrush,
-						double& brushWidth);
+						double& brushWidth,
+						bool& releaseEraser,
+						bool& clearSelection,
+						bool& undoMove,
+						bool& undoResize,
+						bool& undoPaste,
+						bool& undoBrush,
+						bool& undoClear,
+						bool& undoErase);
 };
 #endif

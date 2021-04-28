@@ -75,7 +75,7 @@
 #define kChangeInHeightFlag "-dh"
 #define kChangeInHeightFlagLong "-dHeight"
 
-// Brush editing flags
+// Brush/eraser editing flags
 #define kSaveBrushStrokeFlag "-sb"
 #define kSaveBrushStrokeFlagLong "-saveBrush"
 #define kSaveBrushStrokePositionFlag "-sbp"
@@ -84,6 +84,26 @@
 #define kReleaseBrushFlagLong "-releaseBrush"
 #define kBrushWidthFlag "-bw"
 #define kBrushWidthFlagLong "-brushWidth"
+#define kReleaseEraserFlag "-re"
+#define kReleaseEraserFlagLong "-releaseEraser"
+
+// Clear flags
+#define kClearSelectionFlag "-csl"
+#define kClearSelectionFlagLong "-clearSelection"
+
+// Undo flags
+#define kMoveUndoFlag "-umv"
+#define kMoveUndoFlagLong "-undoMove"
+#define kResizeUndoFlag "-urs"
+#define kResizeUndoFlagLong "-undoResize"
+#define kPasteUndoFlag "-upt"
+#define kPasteUndoFlagLong "-undoPaste"
+#define kBrushUndoFlag "-ubr"
+#define kBrushUndoFlagLong "-undoBrush"
+#define kClearUndoFlag "-ucr"
+#define kClearUndoFlagLong "-undoClear"
+#define kEraseUndoFlag "-uer"
+#define kEraseUndoFlagLong "-undoErase"
 
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
@@ -128,13 +148,26 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kStartMoveFlag, kStartMoveFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInXFlag, kChangeInXFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInZFlag, kChangeInZFlagLong, MSyntax::kDouble);
+
 	syntax.addFlag(kStartResizeFlag, kStartResizeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kChangeInWidthFlag, kChangeInWidthFlagLong, MSyntax::kDouble);
 	syntax.addFlag(kChangeInHeightFlag, kChangeInHeightFlagLong, MSyntax::kDouble);
+
 	syntax.addFlag(kSaveBrushStrokeFlag, kSaveBrushStrokeFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kSaveBrushStrokePositionFlag, kSaveBrushStrokePositionFlagLong, MSyntax::kDouble, MSyntax::kDouble);
 	syntax.addFlag(kReleaseBrushFlag, kReleaseBrushFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kBrushWidthFlag, kBrushWidthFlagLong, MSyntax::kDouble);
+	syntax.addFlag(kReleaseEraserFlag, kReleaseEraserFlagLong, MSyntax::kBoolean);
+
+	syntax.addFlag(kClearSelectionFlag, kClearSelectionFlagLong, MSyntax::kBoolean);
+
+	syntax.addFlag(kMoveUndoFlag, kMoveUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kResizeUndoFlag, kResizeUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kPasteUndoFlag, kPasteUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kBrushUndoFlag, kBrushUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kClearUndoFlag, kClearUndoFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kEraseUndoFlag, kEraseUndoFlagLong, MSyntax::kBoolean);
+
 	return syntax;
 }
 
@@ -168,7 +201,15 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  bool& saveBrush,
 							  vec2& brushPos,
 							  bool& releaseBrush,
-							  double& brushWidth)
+							  double& brushWidth,
+							  bool& releaseEraser,
+							  bool& clearSelection,
+							  bool& undoMove,
+							  bool& undoResize,
+							  bool& undoPaste,
+							  bool& undoBrush,
+							  bool& undoClear,
+							  bool& undoErase)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -438,10 +479,56 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	} else if (parser.isFlagSet(kBrushWidthFlagLong)) {
 		stat = parser.getFlagArgument(kBrushWidthFlagLong, 0, brushWidth);
 	}
+	if (parser.isFlagSet(kReleaseEraserFlag)) {
+		stat = parser.getFlagArgument(kReleaseEraserFlag, 0, releaseEraser);
+	}
+	else if (parser.isFlagSet(kReleaseEraserFlagLong)) {
+		stat = parser.getFlagArgument(kReleaseEraserFlagLong, 0, releaseEraser);
+	}
+	if (parser.isFlagSet(kClearSelectionFlag)) {
+		stat = parser.getFlagArgument(kClearSelectionFlag, 0, clearSelection);
+	}
+	else if (parser.isFlagSet(kClearSelectionFlagLong)) {
+		stat = parser.getFlagArgument(kClearSelectionFlagLong, 0, clearSelection);
+	}
+	if (parser.isFlagSet(kMoveUndoFlag)) {
+		stat = parser.getFlagArgument(kMoveUndoFlag, 0, undoMove);
+	}
+	else if (parser.isFlagSet(kMoveUndoFlagLong)) {
+		stat = parser.getFlagArgument(kMoveUndoFlagLong, 0, undoMove);
+	}
+	if (parser.isFlagSet(kResizeUndoFlag)) {
+		stat = parser.getFlagArgument(kResizeUndoFlag, 0, undoResize);
+	}
+	else if (parser.isFlagSet(kResizeUndoFlagLong)) {
+		stat = parser.getFlagArgument(kResizeUndoFlagLong, 0, undoResize);
+	}
+	if (parser.isFlagSet(kPasteUndoFlag)) {
+		stat = parser.getFlagArgument(kPasteUndoFlag, 0, undoPaste);
+	}
+	else if (parser.isFlagSet(kPasteUndoFlagLong)) {
+		stat = parser.getFlagArgument(kPasteUndoFlagLong, 0, undoPaste);
+	}
+	if (parser.isFlagSet(kBrushUndoFlag)) {
+		stat = parser.getFlagArgument(kBrushUndoFlag, 0, undoBrush);
+	}
+	else if (parser.isFlagSet(kBrushUndoFlagLong)) {
+		stat = parser.getFlagArgument(kBrushUndoFlagLong, 0, undoBrush);
+	}
+	if (parser.isFlagSet(kEraseUndoFlag)) {
+		stat = parser.getFlagArgument(kEraseUndoFlag, 0, undoErase);
+	}
+	else if (parser.isFlagSet(kEraseUndoFlagLong)) {
+		stat = parser.getFlagArgument(kEraseUndoFlagLong, 0, undoErase);
+	}
+	if (parser.isFlagSet(kClearUndoFlag)) {
+		stat = parser.getFlagArgument(kClearUndoFlag, 0, undoClear);
+	}
+	else if (parser.isFlagSet(kClearUndoFlagLong)) {
+		stat = parser.getFlagArgument(kClearUndoFlagLong, 0, undoClear);
+	}
 	return stat;
 }
-
-
 
 // Plugin doIt function
 MStatus WPPlugin::doIt(const MArgList& argList)
@@ -496,17 +583,36 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	vec2 brushPos;
 	bool releaseBrush = false;
 	double brushWidth;
+	bool releaseEraser = false;
+
+	// Clear selection stuff
+	bool clearSelection = false;
+
+	// Undo stuff
+	bool undoMove = false;
+	bool undoResize = false;
+	bool undoPaste = false;
+	bool undoBrush = false;
+	bool undoClear = false;
+	bool undoErase = false;
 
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, 
 				treeOBJ, shrubOBJ, rockOBJ, grassOBJ, isSelRegionMoving,
 				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
-				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth);
+				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth, releaseEraser, clearSelection,
+				undoMove, undoResize, undoPaste, undoBrush, undoClear, undoErase);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
 	*/
+
+	// Update selection region 3D position (if needed)
+	if (isSelRegionMoving) {
+		// Update selection region
+		WorldPalette::terrain.updateSelectionRegion();
+	}
 
 	// Update priority order (if needed)
 	if (priOrder.size() == WorldPalette::priorityOrder.size()) {
@@ -556,12 +662,6 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		return status;
 	}
 
-	// Update selection region 3D position (if needed)
-	if (isSelRegionMoving) {
-		// Update selection region
-		WorldPalette::terrain.updateSelectionRegion();
-	}
-
 	// Start moving the distribution by first storing the geometry within it
 	if (startMove) {
 		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
@@ -598,6 +698,59 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 		worldPalette.brushDistribution(brushWidth);
 		WorldPalette::brushStrokes.clear(); // empty the stroke list
 		//printString(MString("Brush released!"), "");
+	}
+
+	// Use saved eraser strokes, then reset the list
+	if (releaseEraser) {
+		worldPalette.eraseDistribution(brushWidth);
+		WorldPalette::brushStrokes.clear();
+	}
+
+	// Check if user wants to clear selection region
+	if (clearSelection) {
+		// First update the selection region
+		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
+		// Then clear the region
+		worldPalette.clearDistribution();
+		return status;
+	}
+
+	if (undoMove) {
+		worldPalette.moveDistributionUndo();
+		// Map selection region to terrain if there is one
+		if (worldPalette.currentlySelectedRegion.selectedRegion.selectionType != SelectionType::NONE && worldPalette.terrain.isInitialized) {
+			WorldPalette::terrain.updateSelectionRegion();
+		}
+		return status;
+	}
+
+	if (undoResize) {
+		// TO DO: Implement this!
+		// Map selection region to terrain if there is one
+		if (worldPalette.currentlySelectedRegion.selectedRegion.selectionType != SelectionType::NONE && worldPalette.terrain.isInitialized) {
+			WorldPalette::terrain.updateSelectionRegion();
+		}
+		return status;
+	}
+
+	if (undoPaste) {
+		worldPalette.pasteDistributionUndo();
+		return status;
+	}
+
+	if (undoBrush) {
+		worldPalette.brushDistributionUndo();
+		return status;
+	}
+
+	if (undoErase) {
+		worldPalette.eraseDistributionUndo();
+		return status;
+	}
+
+	if (undoClear) {
+		worldPalette.clearDistributionUndo();
+		return status;
 	}
 
 	// Check if we're saving/generating or pasting a distribution
@@ -668,6 +821,8 @@ EXPORT MStatus initializePlugin(MObject obj)
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/grass.png\" " + "\"" + loadPath + "/icons/grass.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/terrain.png\" " + "\"" + loadPath + "/icons/terrain.png\"");
 	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/terrain_delete.png\" " + "\"" + loadPath + "/icons/terrain_delete.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/move.png\" " + "\"" + loadPath + "/icons/maya_icons/move.png\"");
+	MGlobal::executeCommand("sysFile -copy \"" + w_palette_path + "/icons/resize.png\" " + "\"" + loadPath + "/icons/maya_icons/resize.png\"");
 
 	// Execute MEL script
 	MGlobal::executeCommand("source \"" + loadPath + "/WorldPalette.mel\";");

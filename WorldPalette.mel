@@ -180,6 +180,10 @@ global proc changeMoveStatus()
     global int $isMoveDistributionActive;
     global string $moveButton;
 
+    // Undo state
+    global int $canUndoMove;
+    global string $undoMoveButton;
+
     $isMoveDistributionActive = ! $isMoveDistributionActive; // revert status
     if ($isMoveDistributionActive) {
         iconTextButton -e -l "Stop Moving Distribution" $moveButton;
@@ -206,6 +210,10 @@ global proc changeMoveStatus()
         WorldPalette -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
     } else {
         iconTextButton -e -l "Start Moving Distribution" $moveButton;
+
+        // Disable undo
+        $canUndoMove = false;
+        iconTextButton -e -en false $undoMoveButton;
     }
 }
 
@@ -213,6 +221,10 @@ global proc changeResizeStatus()
 {
     global int $isResizeDistributionActive;
     global string $resizeButton;
+
+    // Undo state
+    global int $canUndoResize;
+    global string $undoResizeButton;
 
     $isResizeDistributionActive = ! $isResizeDistributionActive; // revert status
     if ($isResizeDistributionActive) {
@@ -240,6 +252,10 @@ global proc changeResizeStatus()
         WorldPalette -sr true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
     } else {
         iconTextButton -e -l "Start Resizing Distribution" $resizeButton;
+
+        // Disable undo
+        $canUndoResize = false;
+        iconTextButton -e -en false $undoResizeButton;
     }
 }
 
@@ -253,6 +269,10 @@ global proc moveAlongAxis(int $axis)
     global string $moveXSlider;
     global string $moveZSlider;
     global int $isMoveDistributionActive;
+
+    // Undo state
+    global int $canUndoMove;
+    global string $undoMoveButton;
 
     float $val = 0; // coordinate value
     float $dx = 0; // change in x-position
@@ -289,6 +309,9 @@ global proc moveAlongAxis(int $axis)
                     WorldPalette -dz $dz;
                 }
             }
+            // Update undo state
+            $canUndoMove = true;
+            iconTextButton -e -en true $undoMoveButton;
         } else {
             // Map region vertices to terrain height (if there is terrain)
             if ($isTerrainLoaded) {
@@ -301,7 +324,7 @@ global proc moveAlongAxis(int $axis)
 // Same function as moveAlongAxis except the region is moved with hotkeys instead
 global proc moveAlongAxisHotkey(int $axis, int $value) 
 {
-    /*global string $selectionRegion[];
+    global string $selectionRegion[];
     global int $selectionType;
     global int $isTerrainLoaded;
 
@@ -309,6 +332,10 @@ global proc moveAlongAxisHotkey(int $axis, int $value)
     global string $moveXSlider;
     global string $moveZSlider;
     global int $isMoveDistributionActive;
+
+    // Undo state
+    global int $canUndoMove;
+    global string $undoMoveButton;
 
     float $val = 0; // coordinate value
     float $dx = 0; // change in x-position
@@ -349,14 +376,16 @@ global proc moveAlongAxisHotkey(int $axis, int $value)
                     WorldPalette -dz $dz;
                 }
             }
+            // Update undo state
+            $canUndoMove = true;
+            iconTextButton -e -en true $undoMoveButton;
         } else {
             // Map region vertices to terrain height (if there is terrain)
             if ($isTerrainLoaded) {
                 WorldPalette -msr true;
             }
         }
-    }*/
-    print $value;
+    }
 }
 
 global proc scaleRegion(int $axis)
@@ -370,6 +399,10 @@ global proc scaleRegion(int $axis)
     global string $widthSlider;
     global string $heightSlider;
     global int $isResizeDistributionActive;
+
+    // Undo state
+    global int $canUndoResize;
+    global string $undoResizeButton;
 
     // Terrain state
     global int $isTerrainLoaded;
@@ -408,6 +441,9 @@ global proc scaleRegion(int $axis)
         if ($isResizeDistributionActive) {
             // Map region vertices to terrain height (if there is terrain)
             WorldPalette -msr $isTerrainLoaded -dw $dw -dh $dh;
+            // Update undo state
+            $canUndoResize = true;
+            iconTextButton -e -en true $undoResizeButton;
         } else {
             // Map region vertices to terrain height (if there is terrain)
             WorldPalette -msr $isTerrainLoaded;
@@ -420,6 +456,43 @@ global proc scaleRegion(int $axis)
         if ($isMoveDistributionActive) {
             WorldPalette -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
         }
+    }
+}
+
+global proc clearSelection()
+{
+    global string $clearButton;
+    global string $selectionRegion[];
+    global int $selectionType;
+
+    // Undo state
+    global int $canUndoClear;
+    global string $undoClearButton;
+
+    // We must have an active selection region to be able to clear a distribution
+    if ($selectionType) {
+        // Get the current region properties
+        float $width = 0;
+        float $height = 0;
+        float $boundBox[];
+        float $worldPos[];
+        if ($selectionType == 1) {
+            // PLANAR
+            $width = `polyPlane -q -w $selectionRegion`;
+            $height = `polyPlane -q -h $selectionRegion`;
+            $boundBox = `exactWorldBoundingBox $selectionRegion`;
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+        } else if ($selectionType == 2) {
+            // RADIAL
+            $width = `polyCylinder -q -r $selectionRegion[0]`;
+            $boundBox = `exactWorldBoundingBox selectionRegion`;
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+        }
+        // Clear the selection
+        WorldPalette -csl true -st $selectionType -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
+        // Update undo state
+        $canUndoClear = true;
+        iconTextButton -e -en true $undoClearButton;
     }
 }
 
@@ -465,14 +538,13 @@ global proc saveSelection()
             $height = `polyPlane -q -h $selectionRegion`;
             $boundBox = `exactWorldBoundingBox $selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         } else if ($selectionType == 2) {
             // RADIAL
             $width = `polyCylinder -q -r $selectionRegion[0]`;
             $boundBox = `exactWorldBoundingBox selectionRegion`;
             $worldPos = `xform -q -ws -t $selectionRegion`;
-            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         }
+        WorldPalette -st $selectionType -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         // Update the free slot index
         $freeIdx = $freeIdx + 1;
         if ($freeIdx == $numSlots) {
@@ -599,6 +671,11 @@ global proc pasteDistribution()
     global int $currentSlot; // A slot must be selected first for pasting distributions
     global string $selectionRegion[];
     global int $selectionType; // There must be a selection region
+
+    // Undo state
+    global int $canUndoPaste;
+    global string $undoPasteButton;
+
     if ($currentSlot != -1) {
         if ($selectionType) {
             float $width = 0;
@@ -619,6 +696,9 @@ global proc pasteDistribution()
                 $worldPos = `xform -q -ws -t $selectionRegion`;
                 WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
             }
+            // Update undo state
+            $canUndoPaste = true;
+            iconTextButton -e -en true $undoPasteButton;
         } else {
             confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
         }
@@ -632,38 +712,88 @@ global proc changeBrushStatus()
     global string $brushDragContext;
     global int $isBrushActive;
     global string $brushButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoBrush;
+    global int $canUndoErase;
+    global string $undoBrushButton;
+    global string $undoEraseButton;
 
     $isBrushActive = ! $isBrushActive; // revert status
     if ($isBrushActive) {
         iconTextButton -e -l "Stop Brush" $brushButton;
         // Set tool to brush
         setToolTo $brushDragContext;
+        // Enable width slider
+        floatSliderGrp -e -en true $brushWidthSlider;
     } else {
         iconTextButton -e -l "Use Brush" $brushButton;
         // Set tool back to selection
         setToolTo selectSuperContext;
+        // Disable width slider
+        floatSliderGrp -e -en false $brushWidthSlider;
+        // Disable undo
+        $canUndoBrush = false;
+        iconTextButton -e -en false $undoBrushButton;
     }
+
+    // Terminate eraser tool
+    global int $isEraserActive;
+    global string $eraserButton;
+    $isEraserActive = false;
+    iconTextButton -e -l "Use Eraser" $eraserButton;
+    $canUndoErase = false;
+    iconTextButton -e -en false $undoEraseButton;
 }
 
-global proc changeBrushWidth(int $mode)
+global proc changeEraserStatus()
+{
+    global string $eraserDragContext;
+    global int $isEraserActive;
+    global string $eraserButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoBrush;
+    global int $canUndoErase;
+    global string $undoBrushButton;
+    global string $undoEraseButton;
+
+    $isEraserActive = ! $isEraserActive; // revert status
+    if ($isEraserActive) {
+        iconTextButton -e -l "Stop Eraser" $eraserButton;
+        // Set tool to eraser
+        setToolTo $eraserDragContext;
+        // Enable width slider
+        floatSliderGrp -e -en true $brushWidthSlider;
+    } else {
+        iconTextButton -e -l "Use Eraser" $eraserButton;
+        // Set tool back to selection
+        setToolTo selectSuperContext;
+        // Disable width slider
+        floatSliderGrp -e -en false $brushWidthSlider;
+        // Disable undo
+        $canUndoErase = false;
+        iconTextButton -e -en false $undoEraseButton;
+    }
+
+    // Terminate brush tool
+    global int $isBrushActive;
+    global string $brushButton;
+    $isBrushActive = false;
+    iconTextButton -e -l "Use Brush" $brushButton;
+    $canUndoBrush = false;
+    iconTextButton -e -en false $undoBrushButton;
+}
+
+global proc changeBrushWidth()
 {
     global float $brushWidth;
-    switch($mode) {
-        case 0:
-            // decrement
-            if ($brushWidth > 0.5) {
-                $brushWidth -= 0.5;
-            }
-            break;
-        case 1:
-            // increment
-            if ($brushWidth < 5.0) {
-                $brushWidth += 0.5;
-            }
-            break;
-        default:
-            break;
-    }
+    global string $brushWidthSlider;
+
+    // Get the slider value
+    $brushWidth = `floatSliderGrp -q -v $brushWidthSlider`;
 }
 
 global proc brushInitialize()
@@ -671,9 +801,50 @@ global proc brushInitialize()
     // This function handles brush usage for the case where the user activates brush by clicking on the Maya side menu
     global int $isBrushActive;
     global string $brushButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoErase;
+    global string $undoEraseButton;
 
     $isBrushActive = true;
     iconTextButton -e -l "Stop Brush" $brushButton;
+
+    // Terminate eraser tool
+    global int $isEraserActive;
+    global string $eraserButton;
+    $isEraserActive = false;
+    iconTextButton -e -l "Use Eraser" $eraserButton;
+    $canUndoErase = false;
+    iconTextButton -e -en false $undoEraseButton;
+
+    // Enable brush width slider
+    floatSliderGrp -e -en true $brushWidthSlider;
+}
+
+global proc eraserInitialize()
+{
+    global int $isEraserActive;
+    global string $eraserButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoBrush;
+    global string $undoBrushButton;
+
+    $isEraserActive = true;
+    iconTextButton -e -l "Stop Eraser" $eraserButton;
+
+    // Terminate brush tool
+    global int $isBrushActive;
+    global string $brushButton;
+    $isBrushActive = false;
+    iconTextButton -e -l "Use Brush" $brushButton;
+    $canUndoBrush = false;
+    iconTextButton -e -en false $undoBrushButton;
+
+    // Enable brush width slider
+    floatSliderGrp -e -en true $brushWidthSlider;
 }
 
 global proc brushFinalize()
@@ -681,9 +852,44 @@ global proc brushFinalize()
     // This function handles brush usage for the case where the user deactivates brush by clicking on the Maya side menu
     global int $isBrushActive;
     global string $brushButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoBrush;
+    global string $undoBrushButton;
 
     $isBrushActive = false;
     iconTextButton -e -l "Use Brush" $brushButton;
+
+    // Disable brush width slider
+    floatSliderGrp -e -en false $brushWidthSlider;
+
+    // Disable undo
+    $canUndoBrush = false;
+    iconTextButton -e -en false $undoBrushButton;
+}
+
+global proc eraserFinalize()
+{
+    // This function handles eraser usage for the case where the user deactivates eraser by clicking on the Maya side menu
+    global int $isEraserActive;
+    global string $eraserButton;
+    global string $brushWidthSlider;
+
+    // Undo state
+    global int $canUndoErase;
+    global string $undoEraseButton;
+
+    $isEraserActive = false;
+    iconTextButton -e -l "Use Eraser" $eraserButton;
+
+    // Disable brush width slider
+    floatSliderGrp -e -en false $brushWidthSlider;
+
+    // Disable undo
+    $canUndoErase = false;
+    iconTextButton -e -en false $undoEraseButton;
+
 }
 
 global proc brushPress()
@@ -713,11 +919,34 @@ global proc brushDrag()
 
 global proc brushRelease()
 {
+    // Undo state
+    global int $canUndoBrush;
+    global string $undoBrushButton;
+
     global int $first;
     global float $brushWidth;
     $first = true; // reset first brush stroke status
-    // TO DO: Send brush width to be used for pasting distribution
     WorldPalette -rb true -bw $brushWidth;
+
+    // Enable undo
+    $canUndoBrush = true;
+    iconTextButton -e -en true $undoBrushButton;
+}
+
+global proc eraserRelease()
+{
+    // Undo state
+    global int $canUndoErase;
+    global string $undoEraseButton;
+
+    global int $first;
+    global float $brushWidth;
+    $first = true; // reset first brush stroke status
+    WorldPalette -re true -bw $brushWidth;
+
+    // Enable undo
+    $canUndoErase = true;
+    iconTextButton -e -en true $undoEraseButton;
 }
 
 global proc addSceneGeom(int $type)
@@ -945,6 +1174,67 @@ global proc deleteTerrain()
         confirmDialog -t "Delete Terrain" -m "There is no terrain." -b "OK" -icn "warning";
     }
 }
+global proc undoAction(int $actionId)
+{
+    // Undo buttons
+    global string $undoMoveButton;
+    global string $undoResizeButton;
+    global string $undoClearButton;
+    global string $undoPasteButton;
+    global string $undoBrushButton;
+    global string $undoEraseButton;
+
+    // Undo states
+    global int $canUndoMove;
+    global int $canUndoResize;
+    global int $canUndoClear;
+    global int $canUndoPaste;
+    global int $canUndoBrush;
+    global int $canUndoErase;
+
+    // Id mapping
+    // 0 : move
+    // 1 : resize
+    // 2 : clear
+    // 3 : paste
+    // 4 : brush
+    // 5 : erase
+    switch($actionId) 
+    {
+        case 0:
+            WorldPalette -umv $canUndoMove;
+            $canUndoMove = false;
+            iconTextButton -e -en false $undoMoveButton;
+            break;
+        case 1:
+            WorldPalette -urs $canUndoResize;
+            $canUndoResize = false;
+            iconTextButton -e -en false $undoResizeButton;
+            break;
+        case 2:
+            WorldPalette -ucr $canUndoClear;
+            $canUndoClear = false;
+            iconTextButton -e -en false $undoClearButton;
+            break;
+        case 3:
+            WorldPalette -upt $canUndoPaste;
+            $canUndoPaste = false;
+            iconTextButton -e -en false $undoPasteButton;
+            break;
+        case 4:
+            WorldPalette -ubr $canUndoBrush;
+            $canUndoBrush = false;
+            iconTextButton -e -en false $undoBrushButton;
+            break;
+        case 5:
+            WorldPalette -uer $canUndoErase;
+            $canUndoErase = false;
+            iconTextButton -e -en false $undoEraseButton;
+            break;
+        default:
+            break;
+    }
+}
 
 global proc closeWindow()
 {
@@ -971,7 +1261,32 @@ global proc ShowGUI()
     global string $heightSlider;
     global string $resizeButton;
 
+    // Clear region
+    global string $clearButton;
+
+    // Brush/eraser attribute variables
+    global int $isBrushActive;
+    global int $isEraserActive;
     global string $brushButton;
+    global string $eraserButton;
+    global string $brushWidthSlider;
+
+    // Undo buttons
+    global string $undoMoveButton;
+    global string $undoResizeButton;
+    global string $undoClearButton;
+    global string $undoPasteButton;
+    global string $undoBrushButton;
+    global string $undoEraseButton;
+
+    // Undo states
+    global int $canUndoMove;
+    global int $canUndoResize;
+    global int $canUndoClear;
+    global int $canUndoPaste;
+    global int $canUndoBrush;
+    global int $canUndoErase;
+
     global string $modeCollection;
     global int $selectionType;
     // Priority Order
@@ -1004,13 +1319,17 @@ global proc ShowGUI()
                     setParent ..;
                 frameLayout -label "Editing Tools";
                     rowColumnLayout -numberOfColumns 2 -cw 1 200 -cw 2 200 -ro 1 "top" 5;
-                        $moveButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Moving Distribution" -c changeMoveStatus`;
-                        $resizeButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i "Grab.png" -label "Start Resizing Distribution" -c changeResizeStatus`;
+                        $moveButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i ($iconDir + "move.png") -label "Start Moving Distribution" -c changeMoveStatus`;
+                        $undoMoveButton = `iconTextButton -w 200 -h 35 -en false -style "iconAndTextHorizontal" -i "undo.png" -label "Undo Move" -c "undoAction(0)"`;
+                        $resizeButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i ($iconDir + "resize.png") -label "Start Resizing Distribution" -c changeResizeStatus`;
+                        $undoResizeButton = `iconTextButton -w 200 -h 35 -en false -style "iconAndTextHorizontal" -i "undo.png" -label "Undo Resize" -c "undoAction(1)"`;
+                        $clearButton = `iconTextButton -w 200 -h 35 -style "iconAndTextHorizontal" -i "Scrape.png" -label "Clear Distribution" -c clearSelection`;
+                        $undoClearButton = `iconTextButton -w 200 -h 35 -en false -style "iconAndTextHorizontal" -i "undo.png" -label "Undo Clear" -c "undoAction(2)"`;
                     setParent ..;
                 frameLayout -label "Other Options";
-                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Focus On Selection Region" -c focusOnCurrentSelection;
-                        button -l "Save Selection to Palette" -c saveSelection;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5 -ro 1 "top" 5;
+                    iconTextButton -h 35 -style "iconAndTextHorizontal" -i "CenterPivot.png" -label "Focus On Selection Region" -c focusOnCurrentSelection;
+                    iconTextButton -h 35 -style "iconAndTextHorizontal" -i "save.png" -label "Save Selection to Palette" -c saveSelection;
                     setParent ..;
             setParent $window;
             frameLayout -label "Distribution" -collapsable true;
@@ -1020,32 +1339,44 @@ global proc ShowGUI()
                         button -l "Update Priority" -c updatePriority -h 25;
                     setParent ..;
                 frameLayout -label "Palette";
-                    rowColumnLayout -nc 6 -cw 1 50 -cw 2 50 -cw 3 50 -cw 4 50 -cw 5 50 -cw 6 100 -rs 1 5 -rs 2 5 -cs 1 5 -cs 2 5 -cs 3 5 -cs 4 5 -cs 5 5 -cs 6 15;
+                    rowColumnLayout -nc 5 -cw 1 50 -cw 2 50 -cw 3 50 -cw 4 50 -cw 5 50 -rs 1 5 -rs 2 5 -cs 1 5 -cs 2 5 -cs 3 5 -cs 4 5 -cs 5 5;
                     $palette[0] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(0)"`;
                     $palette[1] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(1)"`;
                     $palette[2] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(2)"`;
                     $palette[3] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(3)"`;
                     $palette[4] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(4)"`;
-                    iconTextButton -w 100 -h 50 -style "iconAndTextHorizontal" -i "Imprint.png" -label "Paste Distribution" -c pasteDistribution;
-                    //button -l "Paste Distribution" -c pasteDistribution -w 100;
                     $palette[5] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(5)"`;
                     $palette[6] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(6)"`;
                     $palette[7] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(7)"`;
                     $palette[8] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
                     $palette[9] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
                     setParent ..;
+                frameLayout -label "Paste Distribution";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5 -ro 1 "top" 5;
+                        iconTextButton -h 35 -style "iconAndTextHorizontal" -i "Imprint.png" -label "Paste Distribution" -c pasteDistribution;
+                        $undoPasteButton = `iconTextButton -h 35 -en false -style "iconAndTextHorizontal" -i "undo.png" -label "Undo Paste" -c "undoAction(3)"`;
+                    setParent ..;
             setParent $window;
             frameLayout -label "Brush" -collapsable true;
-                rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
-                    $brushButton = `iconTextButton -w 400 -h 50 -style "iconAndTextHorizontal" -al "center" -i "art3dPaint.png" -label "Use Brush" -c changeBrushStatus`;
-                rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
-                    button -l "Increase Width" -c "changeBrushWidth(1)"; button -l "Decrease Width" -c "changeBrushWidth(0)";
+                frameLayout -label "Brush Properties";
+                rowColumnLayout -numberOfColumns 1 -co 1 "both" 5 -ro 1 "top" 5;
+                    $brushWidthSlider = `floatSliderGrp -label "Brush Width" -en false -w 400 -field true -v 0.5 -min 0.5 -max 10 -s 1 -cal 1 "center" -adj 1 -dc "changeBrushWidth" -cc "changeBrushWidth"`;
+                setParent ..;
+                frameLayout -label "Brush Tools";
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 200 -columnWidth 2 200 -ro 1 "top" 5;
+                        $brushButton = `iconTextButton -w 400 -h 35 -style "iconAndTextHorizontal" -al "center" -i "art3dPaint.png" -label "Use Brush" -c changeBrushStatus`;
+                        $undoBrushButton = `iconTextButton -w 400 -h 35 -en false -style "iconAndTextHorizontal" -al "center" -i "undo.png" -label "Undo Brush" -c "undoAction(4)"`;
+                        $eraserButton = `iconTextButton -w 400 -h 35 -style "iconAndTextHorizontal" -al "center" -i "Erase.png" -label "Use Eraser" -c changeEraserStatus`;
+                        $undoEraseButton = `iconTextButton -w 400 -h 35 -en false -style "iconAndTextHorizontal" -al "center" -i "undo.png" -label "Undo Eraser" -c "undoAction(5)"`;
+                    setParent ..;
             setParent $window;        
             frameLayout -label "Scene" -collapsable true;
-                frameLayout -label "Creation";
+                frameLayout -label "Default";
+                    rowColumnLayout -numberOfColumns 1 -columnWidth 1 400 -rs 1 5 -cs 1 5 -ro 1 "top" 5;
+                        iconTextButton -h 35 -style "iconAndTextHorizontal" -i "Objects.png" -label "Load Default Scene" -c loadDefaultScene;
+                    setParent ..;
+                frameLayout -label "Customization";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5;
-                        button -l "Load Default Scene" -c loadDefaultScene;
-                        button -l "Paste Distribution" -c pasteDistribution;
                         iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Tree" -i ($iconDir + "tree.png") -w 35 -h 35 -c "uploadUserTree";
                         iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Rock" -i ($iconDir + "big_rock.png") -w 35 -h 35 -c "uploadUserRock";
                         iconTextButton -st "iconAndTextHorizontal" -l "Add Custom Shrub" -i ($iconDir + "shrub.png") -w 35 -h 35 -c "uploadUserShrub";
@@ -1094,6 +1425,21 @@ global proc ShowGUI()
         $isResizeDistributionActive = false;
         iconTextButton -e -l "Start Resizing Distribution" $resizeButton;
     }
+    if ($isBrushActive) {
+        button -e -l "Stop Brush" $brushButton;
+        floatSliderGrp -e -en true $brushWidthSlider;
+    }
+    if ($isEraserActive) {
+        button -e -l "Stop Eraser" $eraserButton;
+        floatSliderGrp -e -en true $brushWidthSlider;
+    }
+    // Enable undo buttons (if necessary)
+    if ($canUndoMove) iconTextButton -e -en true $undoMoveButton;
+    if ($canUndoResize) iconTextButton -e -en true $undoResizeButton;
+    if ($canUndoClear) iconTextButton -e -en true $undoClearButton;
+    if ($canUndoPaste) iconTextButton -e -en true $undoPasteButton;
+    if ($canUndoBrush) iconTextButton -e -en true $undoBrushButton;
+    if ($canUndoErase) iconTextButton -e -en true $undoEraseButton;
     // Append the items to priority order scroll in correct order
     fillPriority;
     // Update palette images
@@ -1176,14 +1522,27 @@ global string $moveButton;
 // Resize distribution
 global string $resizeButton;
 
-// Brush
+// Clear button
+global string $clearButton;
+
+// Brush/Eraser
 global string $brushButton;
+global string $eraserButton;
+global string $brushWidthSlider;
 
 // Priority
 global string $scrollPriority;
 
 // Palette
 global string $palette[];
+
+// Undo buttons
+global string $undoMoveButton;
+global string $undoResizeButton;
+global string $undoClearButton;
+global string $undoPasteButton;
+global string $undoBrushButton;
+global string $undoEraseButton;
 
 /*
     State Variables
@@ -1234,6 +1593,10 @@ global string $brushDragContext; // draggerContext
 global float $lastDragPosition[]; // last brush drag position
 global int $first; // is this the first brush stroke during drag?
 
+// Eraser
+global int $isEraserActive = false;
+global string $eraserDragContext; // draggerContext
+
 // Selection Shader
 global string $selectionMat;
 
@@ -1241,6 +1604,14 @@ global string $selectionMat;
 global int $selectionExists = false;
 global string $selectionRegion[];
 global int $selectionType = 0;
+
+// Undo states
+global int $canUndoMove = false;
+global int $canUndoResize = false;
+global int $canUndoClear = false;
+global int $canUndoPaste = false;
+global int $canUndoBrush = false;
+global int $canUndoErase = false;
 
 // Create the selection display layer
 global string $selectionLayer;
@@ -1267,7 +1638,10 @@ setAttr "selection.transparency" -type double3 0.85 0.85 0.85;
 select -cl  ;
 
 // Set the brush dragger context
-$brushDragContext = `draggerContext -i1 "brush.png" -inz "brushInitialize" -fnz "brushFinalize" -pc "brushPress" -dc  "brushDrag" -rc "brushRelease" -cursor "hand"`;
+$brushDragContext = `draggerContext -i1 "art3dPaint.png" -inz "brushInitialize" -fnz "brushFinalize" -pc "brushPress" -dc  "brushDrag" -rc "brushRelease" -cursor "hand"`;
+
+// Set the eraser dragger context
+$eraserDragContext = `draggerContext -i1 "Erase.png" -inz "eraserInitialize" -fnz "eraserFinalize" -pc "brushPress" -dc  "brushDrag" -rc "eraserRelease" -cursor "hand"`;
 
 // Reset the selection region and scene objects if a new scene is created
 scriptJob -event "SceneOpened" resetState;
@@ -1287,17 +1661,16 @@ $shrubName = "shrub:Shrub";
 $grassName = "grass:Grass";
 
 // Set the hotkeys
-/*runTimeCommand -commandLanguage "mel" -command ("print \"Hello\\n\"") moveSelRegionUp;
-nameCommand -annotation "Move Up" -command "moveSelRegionUp" moveSelRegionUpName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionDown;
-nameCommand -annotation "Move Down" -command " moveSelRegionDown" moveSelRegionDownName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionLeft;
-nameCommand -annotation "Move Left" -command " moveSelRegionLeft" moveSelRegionLeftName;
-runTimeCommand -commandLanguage "mel" -command "moveAlongAxisHotkey" moveSelRegionRight;
-nameCommand -annotation "Move Right" -command "moveSelRegionRight" moveSelRegionRightName;
-hotkey -k "Up" -sht -alt -name "moveSelRegionUpName";
-hotkey -k "Down" -sht -alt -name "moveSelRegionDownName";
-hotkey -k "Left" -sht -alt -name "moveSelRegionLeftName";
-hotkey -k "Right" -sht -alt -name "moveSelRegionRightName";*/
+if (!`hotkeySet -ex WorldPaletteKeySet`) {
+    hotkeySet -current WorldPaletteKeySet; // Set current hotkey set
+}
+nameCommand -annotation "Move Region Up" -command "moveAlongAxisHotkey(0,1)" moveSelRegionUp;
+nameCommand -annotation "Move Region Down" -command "moveAlongAxisHotkey(0,-1)" moveSelRegionDown;
+nameCommand -annotation "Move Left" -command " moveAlongAxisHotkey(1,1)" moveSelRegionLeft;
+nameCommand -annotation "Move Right" -command "moveAlongAxisHotkey(1,-1)" moveSelRegionRight;
+hotkey -k "w" -sht -name "moveSelRegionUp";
+hotkey -k "s" -sht -name "moveSelRegionDown";
+hotkey -k "a" -sht -name "moveSelRegionLeft";
+hotkey -k "d" -sht -name "moveSelRegionRight";
 // Import scene object meshes
 importSceneOBJs();
