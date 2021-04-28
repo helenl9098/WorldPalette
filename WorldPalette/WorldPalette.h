@@ -31,6 +31,11 @@ private:
 	bool eraseUndo;
 	std::vector<std::pair<CATEGORY, vec3>> clearOldGeometry; // this is used for the clear undo button. stores all the geometry that used to be there.
 	bool clearUndo;
+	std::vector<std::pair<CATEGORY, vec3>> resizeOldGeometry; // this is used for the paste undo button. stores all the geometry that used to be there.
+	bool resizeUndo; // this is used for the paste undo button. This tells us if we can undo our last paste.
+	float resizeStartRadius;
+	Distribution resizeTmpDist;
+	std::vector<MString> resizeAddedObjects; // this is used fo the paste undo button. stores all the geometry added in teh previous paste.
 
 
 public: 
@@ -49,7 +54,8 @@ public:
 	int findIndexGivenCategory(CATEGORY c);
 
 	float calculateRatio(Distribution& tmpDist);
-	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, std::vector<SceneObject>& influenceObject); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
+	std::vector<SceneObject> metropolisHastingSampling(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, float influenceRadius, 
+		std::vector<SceneObject>& influenceObject, bool resize, float dx, Distribution& unresizedDistribution); // generates a vector of scene objects in the given area using the Metropolis-Hastings Sampling Algorithm
 	
 	// TO DO: add future editing operations here
 	void pasteDistribution(SelectionType st, float w, float h, vec3 min, vec3 max, vec3 pos, int index);
@@ -63,6 +69,9 @@ public:
 	void eraseDistributionUndo(); // Button should call this function
 	void clearDistribution();
 	void clearDistributionUndo(); // Button should call this function
+	void resizeDistribution(float dx, float dz); 
+	void resizeDistributionSave(float width);
+	void resizeDistributionUndo();
 
 	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
 
