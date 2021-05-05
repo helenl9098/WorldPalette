@@ -1353,7 +1353,8 @@ global proc ShowGUI()
     string $ws = `workspace -q -fullName`;
     string $iconDir = $ws + "/WorldPalette/icons/";
     // Create the GUI window
-    string $window = `window -title "WorldPalette GUI" -s 0 -w 400 -cc closeWindow`;
+    string $window = `window -title "WorldPalette GUI" -s 1 -w 415 -cc closeWindow`;
+        scrollLayout -w 430 -h 200 -vst 15 -cr true;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
