@@ -566,6 +566,7 @@ void WorldPalette::resizeDistribution(float dx, float dz) {
                 currentlySelectedRegion.selectedRegion.height, currentlySelectedRegion.selectedRegion.minBounds, 
                 currentlySelectedRegion.selectedRegion.maxBounds, currentlySelectedRegion.selectedRegion.position); // find the objects within the selection region
             for (SceneObject& geom : geomToDelete) {
+                geom.position -= currentlySelectedRegion.selectedRegion.position;
                 //if (geom.position.Length() > currentlySelectedRegion.selectedRegion.width - dx) {
                     MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
                     MGlobal::executeCommand("delete"); // Delete the geometry
@@ -604,7 +605,7 @@ void WorldPalette::resizeDistributionUndo() {
 
     // change the size of the selection region
     MGlobal::executeCommand(("setAttr($selectionRegion[1] + \".radius\") (" + std::to_string(resizeStartRadius) + ")").c_str());
-    // TO DO: CHANGE SLIDER TO BE resizeStartRadius
+    MGlobal::executeCommand(("floatSliderGrp -edit -v " + std::to_string(resizeStartRadius) + " $widthSlider;").c_str());
 }
 
 void WorldPalette::brushDistributionUndo() {
@@ -799,6 +800,8 @@ void WorldPalette::moveDistributionUndo() {
     moveDistribution(changeInPosition[0], changeInPosition[2]);
     // move the selection region
     MGlobal::executeCommand((std::string("move -r ") + std::to_string(changeInPosition[0]) + std::string(" ") + std::to_string(0.f) + std::string(" ") + std::to_string(changeInPosition[2]) + std::string(" selectionRegion")).c_str());
+    MGlobal::executeCommand(("floatSliderGrp -edit -v " + std::to_string(moveOldPosition[0]) + " $moveXSlider;").c_str());
+    MGlobal::executeCommand(("floatSliderGrp -edit -v " + std::to_string(moveOldPosition[2]) + " $moveZSlider;").c_str());
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
