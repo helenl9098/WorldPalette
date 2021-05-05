@@ -794,6 +794,8 @@ void WorldPalette::moveDistributionUndo() {
 }
 
 void WorldPalette::moveDistribution(float dx, float dz) {
+    // First save the old position of the selection region
+    moveOldPosition = currentlySelectedRegion.selectedRegion.position;
     // Update the position of the selection region
     currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
     for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
@@ -872,7 +874,8 @@ void WorldPalette::brushDistribution(float brushWidth) {
     for (vec3& point : finalPoints) {
         //printVec3(MString("Point on path: "), point);
         std::vector<SceneObject> geomToDelete;
-        findSceneObjects(geomToDelete, st, brushWidth, h, min, min, point); // find the objects within the selection region
+        float halfWidth = brushWidth / 2;
+        findSceneObjects(geomToDelete, st, halfWidth, h, min, min, point); // find the objects within the selection region
         for (SceneObject geom : geomToDelete) {
             MGlobal::executeCommand("select -r " + geom.name); // Select the geometry
             MGlobal::executeCommand("delete"); // Delete the geometry
