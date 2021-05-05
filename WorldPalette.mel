@@ -76,28 +76,42 @@ global proc deleteCurrentSelectRegion()
         // We must also reset the move GUI tools related to this
 
         // Selection region sliders
-        global int $isMoveDistributionActive;
         global string $moveXSlider;
         global string $moveZSlider;
         global string $widthSlider;
-        global string $heightSlider;
-        global string $moveButton;
         // Reset slider values
         floatSliderGrp -e -v 0 $moveXSlider;
         floatSliderGrp -e -v 0 $moveZSlider;
         floatSliderGrp -e -v 1 $widthSlider;
-        floatSliderGrp -e -v 1 $heightSlider;
-        // Disable width/height sliders
+        // Disable move sliders
+        floatSliderGrp -e -en false $moveXSlider;
+        floatSliderGrp -e -en false $moveZSlider;
+        // Disable width slider
         floatSliderGrp -e -en false $widthSlider;
-        floatSliderGrp -e -en false $heightSlider;
-        // Stop moving the distribution immediately
-        $isMoveDistributionActive = false;
-        iconTextButton -e -l "Start Moving Distribution" $moveButton;
 
+        // Editing tools
+        global int $isMoveDistributionActive;
+        global int $isResizeDistributionActive;
+        global string $moveButton;
+        global string $resizeButton;
+        $isMoveDistributionActive = false;
+        $isResizeDistributionActive = false;
+        iconTextButton -e -l "Start Moving Distribution" $moveButton;
+        iconTextButton -e -l "Start Resizing Distribution" $resizeButton;
+
+        // Undo tools
+        global int $canUndoMove;
+        global string $undoMoveButton;
+        global int $canUndoResize;
+        global string $undoResizeButton;
+        $canUndoMove = false;
+        $canUndoResize = false;
+        iconTextButton -e -en false $undoMoveButton;
+        iconTextButton -e -en false $undoResizeButton;
     }
 }
 
-global proc makePlanarSelectRegion()
+/*global proc makePlanarSelectRegion()
 {
     global string $selectionMat;
     global string $selectionRegion[];
@@ -106,6 +120,8 @@ global proc makePlanarSelectRegion()
     global int $isTerrainLoaded;
 
     // Selection region sliders
+    global string $moveXSlider;
+    global string $moveZSlider;
     global string $widthSlider;
     global string $heightSlider;
 
@@ -126,11 +142,14 @@ global proc makePlanarSelectRegion()
             WorldPalette -msr true;
         }
         select -cl  ; // deselect
+        // Enable move sliders
+        floatSliderGrp -e -en true $moveXSlider;
+        floatSliderGrp -e -en true $moveZSlider;
         // Enable width & height sliders
         floatSliderGrp -e -en true $widthSlider;
         floatSliderGrp -e -en true $heightSlider;
     }
-}
+}*/
 
 global proc makeRadialSelectRegion()
 {
@@ -140,7 +159,9 @@ global proc makeRadialSelectRegion()
     global string $selectionLayer;
     global int $isTerrainLoaded;
 
-    // Selection region width slider
+    // Selection region sliders
+    global string $moveXSlider;
+    global string $moveZSlider;
     global string $widthSlider;
 
     int $res = 20; // disk resolution
@@ -159,6 +180,9 @@ global proc makeRadialSelectRegion()
             WorldPalette -msr true;
         }
         select -cl  ; // deselect
+        // Enable move sliders
+        floatSliderGrp -e -en true $moveXSlider;
+        floatSliderGrp -e -en true $moveZSlider;
         // Enable width slider
         floatSliderGrp -e -en true $widthSlider;
     }
@@ -172,17 +196,27 @@ global proc focusOnCurrentSelection()
         select -r $selectionRegion[0];
         viewFit -f 0.;
         select -cl  ; // deselect
+    } else {
+        confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
     }
 }
 
 global proc changeMoveStatus()
 {
+    global int $selectionType;
+
     global int $isMoveDistributionActive;
     global string $moveButton;
 
     // Undo state
     global int $canUndoMove;
     global string $undoMoveButton;
+
+    // Can't change status if there isn't an active selection region
+    if (!$selectionType) {
+        confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
+        return;
+    }
 
     $isMoveDistributionActive = ! $isMoveDistributionActive; // revert status
     if ($isMoveDistributionActive) {
@@ -194,18 +228,10 @@ global proc changeMoveStatus()
         float $height = 0;
         float $bb[]; // bound box
         float $wp[]; // world position
-        if ($selectionType == 1) {
-            // PLANAR
-            $width = `polyPlane -q -w $selectionRegion`;
-            $height = `polyPlane -q -h $selectionRegion`;
-            $bb = `exactWorldBoundingBox $selectionRegion`;
-            $wp = `xform -q -ws -t $selectionRegion`;
-        } else if ($selectionType == 2) {
-            // RADIAL
-            $width = `polyCylinder -q -r $selectionRegion[0]`;
-            $bb = `exactWorldBoundingBox selectionRegion`;
-            $wp = `xform -q -ws -t $selectionRegion`;
-        }
+        // RADIAL
+        $width = `polyCylinder -q -r $selectionRegion[0]`;
+        $bb = `exactWorldBoundingBox selectionRegion`;
+        $wp = `xform -q -ws -t $selectionRegion`;
         // Set current distribution on the C++ side (aka get the list of geoms inside the selection region)
         WorldPalette -sm true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
     } else {
@@ -219,12 +245,20 @@ global proc changeMoveStatus()
 
 global proc changeResizeStatus()
 {
+    global int $selectionType;
+
     global int $isResizeDistributionActive;
     global string $resizeButton;
 
     // Undo state
     global int $canUndoResize;
     global string $undoResizeButton;
+
+    // Can't change status if there isn't an active selection region
+    if (!$selectionType) {
+        confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
+        return;
+    }
 
     $isResizeDistributionActive = ! $isResizeDistributionActive; // revert status
     if ($isResizeDistributionActive) {
@@ -236,18 +270,10 @@ global proc changeResizeStatus()
         float $height = 0;
         float $bb[]; // bound box
         float $wp[]; // world position
-        if ($selectionType == 1) {
-            // PLANAR
-            $width = `polyPlane -q -w $selectionRegion`;
-            $height = `polyPlane -q -h $selectionRegion`;
-            $bb = `exactWorldBoundingBox $selectionRegion`;
-            $wp = `xform -q -ws -t $selectionRegion`;
-        } else if ($selectionType == 2) {
-            // RADIAL
-            $width = `polyCylinder -q -r $selectionRegion[0]`;
-            $bb = `exactWorldBoundingBox selectionRegion`;
-            $wp = `xform -q -ws -t $selectionRegion`;
-        }
+        // RADIAL
+        $width = `polyCylinder -q -r $selectionRegion[0]`;
+        $bb = `exactWorldBoundingBox selectionRegion`;
+        $wp = `xform -q -ws -t $selectionRegion`;
         // Set current distribution on the C++ side (aka get the list of geoms inside the selection region)
         WorldPalette -sr true -st $selectionType -w $width -h $height -wp $wp[0] $wp[1] $wp[2] -mib $bb[0] $bb[1] $bb[2] -mab $bb[3] $bb[4] $bb[5];
     } else {
@@ -397,7 +423,6 @@ global proc scaleRegion(int $axis)
 
     // Selection region sliders
     global string $widthSlider;
-    global string $heightSlider;
     global int $isResizeDistributionActive;
 
     // Undo state
@@ -412,27 +437,12 @@ global proc scaleRegion(int $axis)
     float $dw = 0; // change in width
     float $dh = 0; // change in height
     if ($selectionType) {
-        if ($selectionType == 1) {
-            select -r $selectionRegion[0];
-            if ($axis == 0) {
-                $width = `floatSliderGrp -q -v $widthSlider`;
-                $dw = $width - (getAttr ($selectionRegion[1] + ".width"));
-                // increase/decrease width
-                setAttr ($selectionRegion[1] + ".width") ($width);
-            } else if ($axis == 1) {
-                $height = `floatSliderGrp -q -v $heightSlider`;
-                $dh = $height - (getAttr ($selectionRegion[1] + ".height"));
-                // increase/decrease height
-                setAttr ($selectionRegion[1] + ".height") ($height);
-            }
-        } else if ($selectionType == 2) {
-            select -r $selectionRegion[0];
-            if ($axis == 0) {
-                $width = `floatSliderGrp -q -v $widthSlider`;
-                $dw = $width - (getAttr ($selectionRegion[1] + ".radius"));
-                // increase/decrease radius
-                setAttr ($selectionRegion[1] + ".radius") ($width);
-            }
+        select -r $selectionRegion[0];
+        if ($axis == 0) {
+            $width = `floatSliderGrp -q -v $widthSlider`;
+            $dw = $width - (getAttr ($selectionRegion[1] + ".radius"));
+            // increase/decrease radius
+            setAttr ($selectionRegion[1] + ".radius") ($width);
         }
         select -cl  ; // deselect
 
@@ -476,23 +486,17 @@ global proc clearSelection()
         float $height = 0;
         float $boundBox[];
         float $worldPos[];
-        if ($selectionType == 1) {
-            // PLANAR
-            $width = `polyPlane -q -w $selectionRegion`;
-            $height = `polyPlane -q -h $selectionRegion`;
-            $boundBox = `exactWorldBoundingBox $selectionRegion`;
-            $worldPos = `xform -q -ws -t $selectionRegion`;
-        } else if ($selectionType == 2) {
-            // RADIAL
-            $width = `polyCylinder -q -r $selectionRegion[0]`;
-            $boundBox = `exactWorldBoundingBox selectionRegion`;
-            $worldPos = `xform -q -ws -t $selectionRegion`;
-        }
+        // RADIAL
+        $width = `polyCylinder -q -r $selectionRegion[0]`;
+        $boundBox = `exactWorldBoundingBox selectionRegion`;
+        $worldPos = `xform -q -ws -t $selectionRegion`;
         // Clear the selection
         WorldPalette -csl true -st $selectionType -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5];
         // Update undo state
         $canUndoClear = true;
         iconTextButton -e -en true $undoClearButton;
+    } else {
+        confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
     }
 }
 
@@ -532,24 +536,18 @@ global proc saveSelection()
         float $height = 0;
         float $boundBox[];
         float $worldPos[];
-        if ($selectionType == 1) {
-            // PLANAR
-            $width = `polyPlane -q -w $selectionRegion`;
-            $height = `polyPlane -q -h $selectionRegion`;
-            $boundBox = `exactWorldBoundingBox $selectionRegion`;
-            $worldPos = `xform -q -ws -t $selectionRegion`;
-        } else if ($selectionType == 2) {
-            // RADIAL
-            $width = `polyCylinder -q -r $selectionRegion[0]`;
-            $boundBox = `exactWorldBoundingBox selectionRegion`;
-            $worldPos = `xform -q -ws -t $selectionRegion`;
-        }
+        // RADIAL
+        $width = `polyCylinder -q -r $selectionRegion[0]`;
+        $boundBox = `exactWorldBoundingBox selectionRegion`;
+        $worldPos = `xform -q -ws -t $selectionRegion`;
         WorldPalette -st $selectionType -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $freeIdx -ge true;
         // Update the free slot index
         $freeIdx = $freeIdx + 1;
         if ($freeIdx == $numSlots) {
             $freeIdx = 0; // set back to idx 0
         }
+    } else {
+        confirmDialog -t "No Region Selected" -m "You must first create a selection region on canvas." -b "OK" -icn "warning";
     }
 }
 
@@ -599,6 +597,69 @@ global proc updatePalette()
             }
         }
     }
+}
+
+global proc loadPalette()
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    global int $freeIdx;
+
+    // TO DO: Import palette
+    // We first want to clear our palette - however this should happen ONLY IF the user was able to import a palette successfully
+    // You can call the clearPalette() function implemented below to clear the palette
+
+    // Once the palette is cleared, you can check out the updatePalette() function above to see how to set palette slot icons to corresponding screenshots
+    // Remember to update the paletteOccupancy and freeIdx variables as well
+    // For palette occupancy, we set entries to either 0 (free slot) or 1 (occupied slot)
+    // freeIdx is used to track the next available slot index (we use it for saving distributions)
+}
+
+global proc savePalette()
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+
+    // TO DO: Export palette
+    // Nothing to do on the MEL side - handle it on C++
+
+    // We can show this popup if saving is successful
+    confirmDialog -t "Save Palette" -m "Palette is saved successfully." -b "OK" -icn "information";
+}
+
+global proc clearPalette()
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    global int $freeIdx;
+
+    // Screenshot directory
+    string $ws = `workspace -q -fullName`;
+    string $wsp = $ws + "/WorldPalette/images";
+
+    // First reset palette buttons and their occupancies
+    for ($i = 0; $i < $numSlots; $i++) {
+        // Reset the button
+        iconTextButton -e -i "sphere.png" $palette[$i];
+        iconTextButton -e -en false $palette[$i];
+        iconTextButton -e -ebg false $palette[$i];
+        if ($paletteOccupancy[$i]) {
+            // Delete the corresponding screenshot
+            string $imgFile = $wsp + "/palette" + $i + ".png";
+            sysFile -delete $imgFile;
+        }
+        $paletteOccupancy[$i] = 0; // reset occupancy
+    }
+    // Reset current slot and slot index where we can save the next distribution
+    $freeIdx = 0;
+    $currentSlot = -1;
+
+    // TO DO: Call C++ code to reset things on C++ side
 }
 
 global proc loadDefaultScene()
@@ -682,20 +743,11 @@ global proc pasteDistribution()
             float $height = 0;
             float $boundBox[];
             float $worldPos[];
-            if ($selectionType == 1) {
-                // PLANAR
-                $width = `polyPlane -q -w $selectionRegion`;
-                $height = `polyPlane -q -h $selectionRegion`;
-                $boundBox = `exactWorldBoundingBox $selectionRegion`;
-                $worldPos = `xform -q -ws -t $selectionRegion`;
-                WorldPalette -st 1 -w $width -h $height -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
-            } else if ($selectionType == 2) {
-                // RADIAL
-                $width = `polyCylinder -q -r $selectionRegion[0]`;
-                $boundBox = `exactWorldBoundingBox selectionRegion`;
-                $worldPos = `xform -q -ws -t $selectionRegion`;
-                WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
-            }
+            // RADIAL
+            $width = `polyCylinder -q -r $selectionRegion[0]`;
+            $boundBox = `exactWorldBoundingBox selectionRegion`;
+            $worldPos = `xform -q -ws -t $selectionRegion`;
+            WorldPalette -st 2 -w $width -wp $worldPos[0] $worldPos[1] $worldPos[2] -mib $boundBox[0] $boundBox[1] $boundBox[2] -mab $boundBox[3] $boundBox[4] $boundBox[5] -pi $currentSlot -ge false;
             // Update undo state
             $canUndoPaste = true;
             iconTextButton -e -en true $undoPasteButton;
@@ -709,6 +761,8 @@ global proc pasteDistribution()
 
 global proc changeBrushStatus()
 {
+    global int $currentSlot; // A slot must be selected first for using brush
+
     global string $brushDragContext;
     global int $isBrushActive;
     global string $brushButton;
@@ -719,6 +773,11 @@ global proc changeBrushStatus()
     global int $canUndoErase;
     global string $undoBrushButton;
     global string $undoEraseButton;
+
+    if ($currentSlot == -1) {
+        confirmDialog -t "No Slot Selected" -m "You must first select a distribution from the palette." -b "OK" -icn "warning";
+        return;
+    }
 
     $isBrushActive = ! $isBrushActive; // revert status
     if ($isBrushActive) {
@@ -1248,7 +1307,6 @@ global proc ShowGUI()
     // Get the necessary global variables
     // Selection region radio buttons
     global string $noSelect;
-    global string $planarSelect;
     global string $radialSelect;
 
     // Selection region attribute sliders
@@ -1258,7 +1316,6 @@ global proc ShowGUI()
     global string $moveButton;
     global int $isResizeDistributionActive;
     global string $widthSlider;
-    global string $heightSlider;
     global string $resizeButton;
 
     // Clear region
@@ -1297,25 +1354,24 @@ global proc ShowGUI()
     string $ws = `workspace -q -fullName`;
     string $iconDir = $ws + "/WorldPalette/icons/";
     // Create the GUI window
-    string $window = `window -title "WorldPalette GUI" -s 0 -w 400 -cc closeWindow`;
+    string $window = `window -title "WorldPalette GUI" -s 1 -w 415 -cc closeWindow`;
+        scrollLayout -w 430 -h 200 -vst 15 -cr true;
         columnLayout -adjustableColumn true;
             frameLayout -label "Selection" -collapsable true;
                 frameLayout -label "Selection Mode";
-                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 125 -columnWidth 2 125 -columnWidth 3 125 -cs 1 5 -cs 2 10 -cs 3 10;
+                    rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -cs 1 5 -cs 2 5;
                         $modeCollection = `radioCollection`;
                         $noSelect = `radioButton -l "No Selection" -onc deleteCurrentSelectRegion`;
-                        $planarSelect = `radioButton -l "Planar Selection" -onc makePlanarSelectRegion -ofc deleteCurrentSelectRegion`;
                         $radialSelect = `radioButton -l "Radial Selection" -onc makeRadialSelectRegion -ofc deleteCurrentSelectRegion`;
                     setParent ..;
                 frameLayout -label "Move Selection";
                     rowColumnLayout -numberOfColumns 1 -co 1 "both" 5;
-                        $moveXSlider = `floatSliderGrp -label "X Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
-                        $moveZSlider = `floatSliderGrp -label "Z Position" -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
+                        $moveXSlider = `floatSliderGrp -label "X Position" -en false -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(0)" -cc "moveAlongAxis(0)"`;
+                        $moveZSlider = `floatSliderGrp -label "Z Position" -en false -w 400 -field true -min -50 -max 50 -s 1 -cal 1 "center" -adj 1 -dc "moveAlongAxis(1)" -cc "moveAlongAxis(1)"`;
                     setParent ..;
                 frameLayout -label "Resize Selection";
                     rowColumnLayout -numberOfColumns 1 -columnWidth 1 400;
                         $widthSlider = `floatSliderGrp -label "Width" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(0)" -cc "scaleRegion(0)"`;
-                        $heightSlider = `floatSliderGrp -label "Height" -en false -w 400 -field true -min 1 -max 10 -s 0.5 -cal 1 "center" -adj 1 -dc "scaleRegion(1)" -cc "scaleRegion(1)"`;
                     setParent ..;
                 frameLayout -label "Editing Tools";
                     rowColumnLayout -numberOfColumns 2 -cw 1 200 -cw 2 200 -ro 1 "top" 5;
@@ -1351,6 +1407,12 @@ global proc ShowGUI()
                     $palette[8] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(8)"`;
                     $palette[9] = `iconTextButton -st "iconOnly" -en false -i "sphere.png" -w 50 -h 50 -c "getDistributionFromPalette(9)"`;
                     setParent ..;
+                frameLayout -label "Palette Options";
+                    rowColumnLayout -numberOfColumns 3 -columnWidth 1 128 -columnWidth 2 128 -columnWidth 3 128 -rs 1 5 -cs 1 5 -cs 2 5 -cs 3 5 -ro 1 "top" 5;
+                    iconTextButton -h 35 -style "iconAndTextHorizontal" -i "bin.png" -label "Load Palette" -c loadPalette;
+                    iconTextButton -h 35 -style "iconAndTextHorizontal" -i "save.png" -label "Save Palette" -c savePalette;
+                    iconTextButton -h 35 -style "iconAndTextHorizontal" -i "trash.png" -label "Clear Palette" -c clearPalette;
+                    setParent ..;
                 frameLayout -label "Paste Distribution";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 195 -columnWidth 2 195 -rs 1 5 -cs 1 5 -cs 2 5 -ro 1 "top" 5;
                         iconTextButton -h 35 -style "iconAndTextHorizontal" -i "Imprint.png" -label "Paste Distribution" -c pasteDistribution;
@@ -1360,7 +1422,7 @@ global proc ShowGUI()
             frameLayout -label "Brush" -collapsable true;
                 frameLayout -label "Brush Properties";
                 rowColumnLayout -numberOfColumns 1 -co 1 "both" 5 -ro 1 "top" 5;
-                    $brushWidthSlider = `floatSliderGrp -label "Brush Width" -en false -w 400 -field true -v 0.5 -min 0.5 -max 10 -s 1 -cal 1 "center" -adj 1 -dc "changeBrushWidth" -cc "changeBrushWidth"`;
+                    $brushWidthSlider = `floatSliderGrp -label "Brush Width" -en false -w 400 -field true -v 1 -min 1 -max 12 -s 1 -cal 1 "center" -adj 1 -dc "changeBrushWidth" -cc "changeBrushWidth"`;
                 setParent ..;
                 frameLayout -label "Brush Tools";
                     rowColumnLayout -numberOfColumns 2 -columnWidth 1 200 -columnWidth 2 200 -ro 1 "top" 5;
@@ -1389,35 +1451,24 @@ global proc ShowGUI()
     // Find which radio button must be set active
     global string $selectionRegion[];
     if ($selectionType) {
-        // Also update the selection region sliders
+        // Enable the position sliders update their values
+        floatSliderGrp -e -en true $moveXSlider;
+        floatSliderGrp -e -en true $moveZSlider;
         float $xval = `getAttr ($selectionRegion[0] + ".translateX")`;
         float $zval = `getAttr ($selectionRegion[0] + ".translateZ")`;
         floatSliderGrp -e -v $xval $moveXSlider;
         floatSliderGrp -e -v $zval $moveZSlider;
-        if ($selectionType == 1) {
-            radioCollection -edit -select $planarSelect $modeCollection;
-            // Enable the width slider and update its value
-            floatSliderGrp -e -en true $widthSlider;
-            float $width = `polyPlane -q -w $selectionRegion`;
-            floatSliderGrp -e -v $width $widthSlider;
-            // Enable the height slider and update its value
-            floatSliderGrp -e -en true $heightSlider;
-            float $height = `polyPlane -q -h $selectionRegion`;
-            floatSliderGrp -e -v $height $heightSlider;
-        } else if ($selectionType == 2) {
-            radioCollection -edit -select $radialSelect $modeCollection;
-            // Enable the width slider and update its value
-            floatSliderGrp -e -en true $widthSlider;
-            float $width = `polyCylinder -q -r $selectionRegion[0]`;
-            floatSliderGrp -e -v $width $widthSlider;
-        }
+        radioCollection -edit -select $radialSelect $modeCollection;
+        // Enable the width slider and update its value
+        floatSliderGrp -e -en true $widthSlider;
+        float $width = `polyCylinder -q -r $selectionRegion[0]`;
+        floatSliderGrp -e -v $width $widthSlider;
     } else {
         radioCollection -edit -select $noSelect $modeCollection;
         // Reset slider values
         floatSliderGrp -e -v 0 $moveXSlider;
         floatSliderGrp -e -v 0 $moveZSlider;
         floatSliderGrp -e -v 1 $widthSlider;
-        floatSliderGrp -e -v 1 $heightSlider;
         // Stop moving the distribution immediately
         $isMoveDistributionActive = false;
         iconTextButton -e -l "Start Moving Distribution" $moveButton;
@@ -1506,7 +1557,6 @@ setUpAxis "y";
 
 // Selection region type radio buttons
 global string $noSelect;
-global string $planarSelect;
 global string $radialSelect;
 global string $modeCollection;
 
@@ -1514,7 +1564,6 @@ global string $modeCollection;
 global string $moveXSlider;
 global string $moveZSlider;
 global string $widthSlider;
-global string $heightSlider;
 
 // Move distribution
 global string $moveButton;
