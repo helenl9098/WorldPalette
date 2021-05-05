@@ -601,17 +601,65 @@ global proc updatePalette()
 
 global proc loadPalette()
 {
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    global int $freeIdx;
 
+    // TO DO: Import palette
+    // We first want to clear our palette - however this should happen ONLY IF the user was able to import a palette successfully
+    // You can call the clearPalette() function implemented below to clear the palette
+
+    // Once the palette is cleared, you can check out the updatePalette() function above to see how to set palette slot icons to corresponding screenshots
+    // Remember to update the paletteOccupancy and freeIdx variables as well
+    // For palette occupancy, we set entries to either 0 (free slot) or 1 (occupied slot)
+    // freeIdx is used to track the next available slot index (we use it for saving distributions)
 }
 
 global proc savePalette()
 {
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
 
+    // TO DO: Export palette
+    // Nothing to do on the MEL side - handle it on C++
+
+    // We can show this popup if saving is successful
+    confirmDialog -t "Save Palette" -m "Palette is saved successfully." -b "OK" -icn "information";
 }
 
 global proc clearPalette()
 {
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    global int $freeIdx;
 
+    // Screenshot directory
+    string $ws = `workspace -q -fullName`;
+    string $wsp = $ws + "/WorldPalette/images";
+
+    // First reset palette buttons and their occupancies
+    for ($i = 0; $i < $numSlots; $i++) {
+        // Reset the button
+        iconTextButton -e -i "sphere.png" $palette[$i];
+        iconTextButton -e -en false $palette[$i];
+        iconTextButton -e -ebg false $palette[$i];
+        if ($paletteOccupancy[$i]) {
+            // Delete the corresponding screenshot
+            string $imgFile = $wsp + "/palette" + $i + ".png";
+            sysFile -delete $imgFile;
+        }
+        $paletteOccupancy[$i] = 0; // reset occupancy
+    }
+    // Reset current slot and slot index where we can save the next distribution
+    $freeIdx = 0;
+    $currentSlot = -1;
+
+    // TO DO: Call C++ code to reset things on C++ side
 }
 
 global proc loadDefaultScene()
