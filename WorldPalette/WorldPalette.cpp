@@ -886,8 +886,6 @@ void WorldPalette::brushDistribution(float brushWidth) {
         }
     }
 
-    // NOTE: ^^^ IF WE KEEP THE ABOVE CODE, IT'S A COOL ERASER TOOL
-
     // now, we want to generate new geometry inside the circles
     for (vec3& point : finalPoints) {
         // first, we specify the circle of influence to be 
@@ -934,16 +932,25 @@ void WorldPalette::brushDistribution(float brushWidth) {
 
 }
 
+// copy in binary mode
+bool copyFile(const char* SRC, const char* DEST)
+{
+    std::ifstream src(SRC, std::ios::binary);
+    std::ofstream dest(DEST, std::ios::binary);
+    dest << src.rdbuf();
+    return src && dest;
+}
+
 void WorldPalette::savePalette() {
     // create a folder and file to save the results to
     MString path;
     MGlobal::executeCommand("workspace -q -fullName", path);
     printString("Workspace Path: ", path);
 
-    MString folderPath = path + "/WorldPalette/palettes";
+    MString folderPath = path + "/WorldPalette/palettes/";
     MGlobal::executeCommand("sysFile -makeDir \"" + folderPath + "\"");
 
-    MString tmp = folderPath + "/palettes.txt";
+    MString tmp = folderPath + "palettes.txt";
     const char* txtfilePath = tmp.asChar();
     std::ofstream file(txtfilePath); //open in constructor
 
@@ -951,6 +958,10 @@ void WorldPalette::savePalette() {
     {
         for (int i = 0; i < maxPaletteSize; i++) {
             if (!palette[i].empty) {
+                // copy image
+                MString src = path + "/WorldPalette/images/palette" + std::to_string(i).c_str() + ".png";
+                copyFile(src.asChar(), folderPath.asChar());
+
                 SelectedRegion& current = this->palette[i].selectedRegion;
                 file << "Palette " << i << endl;
 
