@@ -394,8 +394,10 @@ std::vector<SceneObject> WorldPalette::metropolisHastingSampling(SelectionType s
                 // Element Death
                 // --- a) select a random index to delete
             int randIndex;
-            randIndex = rand() % result.size();
-            
+            //randIndex = rand() % result.size();
+            if (resize && result.size() <= influenceObjects.size()) {
+                continue;
+            }
             if (resize && influenceObjects.size() != 0) {
                 randIndex = rand() % (result.size() - influenceObjects.size()) + influenceObjects.size();
                 if (randIndex > result.size() - 1 || randIndex < 0) {
