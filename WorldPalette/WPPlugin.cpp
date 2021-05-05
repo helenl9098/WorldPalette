@@ -434,14 +434,14 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 		bool tmpMove = startMove;
 		stat = parser.getFlagArgument(kStartMoveFlag, 0, startMove);
 		if (startMove != tmpMove) {
-			worldPalette.moveDistributionSave();
+			//worldPalette.moveDistributionSave();
 		}
 	}
 	else if (parser.isFlagSet(kStartMoveFlagLong)) {
 		bool tmpMove = startMove;
 		stat = parser.getFlagArgument(kStartMoveFlagLong, 0, startMove);
 		if (startMove != tmpMove) {
-			worldPalette.moveDistributionSave();
+			//worldPalette.moveDistributionSave();
 		}
 	}
 	if (parser.isFlagSet(kChangeInXFlag)) {
@@ -703,6 +703,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Start moving the distribution by first storing the geometry within it
 	if (startMove) {
+		worldPalette.moveDistributionSave();
 		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 		return status;
 	}

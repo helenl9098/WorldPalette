@@ -1668,7 +1668,7 @@ global int $currentSlot = -1; // currently selected slot/distribution
 
 // Brush
 global int $isBrushActive = false;
-global float $brushWidth = 8.0;
+global float $brushWidth = 1.0;
 global string $brushDragContext; // draggerContext
 global float $lastDragPosition[]; // last brush drag position
 global int $first; // is this the first brush stroke during drag?

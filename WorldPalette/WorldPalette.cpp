@@ -600,8 +600,11 @@ void WorldPalette::resizeDistribution(float dx, float dz) {
 
 void WorldPalette::resizeDistributionUndo() {
     float dx = resizeStartRadius - currentlySelectedRegion.selectedRegion.width;
-    printFloat("change in radius", dx);
     resizeDistribution(dx, 0);
+
+    // change the size of the selection region
+    MGlobal::executeCommand(("setAttr($selectionRegion[1] + \".radius\") (" + std::to_string(resizeStartRadius) + ")").c_str());
+    // TO DO: CHANGE SLIDER TO BE resizeStartRadius
 }
 
 void WorldPalette::brushDistributionUndo() {
@@ -787,6 +790,7 @@ void WorldPalette::pasteDistribution(SelectionType st, float w, float h, vec3 mi
 
 void WorldPalette::moveDistributionSave() {
     moveOldPosition = currentlySelectedRegion.selectedRegion.position;
+    //printVec3("Saved Position: ", moveOldPosition);
 }
 
 void WorldPalette::moveDistributionUndo() {
@@ -799,7 +803,7 @@ void WorldPalette::moveDistributionUndo() {
 
 void WorldPalette::moveDistribution(float dx, float dz) {
     // First save the old position of the selection region
-    moveOldPosition = currentlySelectedRegion.selectedRegion.position;
+    //moveOldPosition = currentlySelectedRegion.selectedRegion.position;
     // Update the position of the selection region
     currentlySelectedRegion.selectedRegion.position += vec3(dx, 0, dz);
     for (SceneObject o : currentlySelectedRegion.selectedRegion.objects) {
@@ -826,9 +830,9 @@ void WorldPalette::moveDistribution(float dx, float dz) {
                 vec3 worldPos = vec3(currentlySelectedRegion.selectedRegion.position + o.position) + vec3(0, height, 0);
                 vec3 surfaceNormal = WorldPalette::terrain.findSurfaceNormalAtPoint(worldPos); // returns the surface normal at given world position
                 float diffuseTerm = Dot(surfaceNormal.Normalize(), vec3(0, 1, 0));
-                printFloat(MString("Diffuse Term: "), diffuseTerm);
+                //printFloat(MString("Diffuse Term: "), diffuseTerm);
                 if (diffuseTerm < NORM_FACTOR) {
-                    printString(MString("Hiding Object: "), o.name);
+                    //printString(MString("Hiding Object: "), o.name);
                     MGlobal::executeCommand((std::string("hide ") + o.name.asChar()).c_str());
                 }
             }
@@ -914,7 +918,7 @@ void WorldPalette::brushDistribution(float brushWidth) {
         }
     }
 
-    printFloat(MString("number of generated elements"), generatedObjects.size());
+    //printFloat(MString("number of generated elements"), generatedObjects.size());
 
     // actually show the objects in maya
     for (SceneObject& geom : generatedObjects) {
@@ -941,10 +945,10 @@ bool copyFile(const char* SRC, const char* DEST)
     std::ifstream src(SRC, std::ios::binary);
     std::ofstream dest(DEST, std::ios::binary);
     if (src) {
-        printString("Copying Image From:", SRC);
+        //printString("Copying Image From:", SRC);
     }
     if (dest) {
-        printString("Copying Image To:", DEST);
+        //printString("Copying Image To:", DEST);
     }
     dest << src.rdbuf();
     src.close();
@@ -956,7 +960,7 @@ void WorldPalette::savePalette() {
     // create a folder and file to save the results to
     MString path;
     MGlobal::executeCommand("workspace -q -fullName", path);
-    printString("Workspace Path: ", path);
+    //printString("Workspace Path: ", path);
 
     MString folderPath = path + "/WorldPalette/palettes";
     MGlobal::executeCommand("sysFile -makeDir \"" + folderPath + "\"");
@@ -984,7 +988,7 @@ void WorldPalette::savePalette() {
                 file << current.minBounds << endl;
                 file << current.maxBounds << endl;
                 file << current.radius << endl;
-                file << current.position << endl;
+                file << vec3(0, 0, 0) << endl;
 
                 // push back objects
                 for (SceneObject& o : current.objects) {
@@ -1001,14 +1005,14 @@ void WorldPalette::savePalette() {
 }
 
 void WorldPalette::loadPalette() {
-    printString(MString("Loading Palette from File"), MString(""));
+    //printString(MString("Loading Palette from File"), MString(""));
     clearPalette();
 
     MString path;
     MGlobal::executeCommand("workspace -q -fullName", path);
     MString folderPath = path + "/WorldPalette/palettes/palettes.txt";
 
-    printString("Loading Palette From: ", folderPath);
+    //printString("Loading Palette From: ", folderPath);
     std::ifstream file(folderPath.asChar());
     if (file.is_open()) {
         printString("", "Successfully opened file");

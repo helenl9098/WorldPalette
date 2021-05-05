@@ -21,20 +21,19 @@ C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(404,5
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(405,60): warning C4244: 'argument': conversion from 'unsigned __int64' to 'float', possible loss of data
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(406,50): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
 C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(506,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(795,61): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(795,40): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(828,35): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(917,78): warning C4244: 'argument': conversion from 'unsigned __int64' to 'float', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1023,33): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1031,22): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1034,18): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1066,23): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1069,26): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1072,26): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(799,61): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(799,40): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(832,35): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1027,33): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1035,22): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1038,18): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1070,23): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1073,26): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\Helen\Desktop\WPPlugin\WorldPalette\WorldPalette\WorldPalette.cpp(1076,26): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
      Creating library C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.lib and object C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.exp
   Generating code
-  6 of 1335 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+  8 of 1335 functions ( 0.6%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    7 functions had inline decision re-evaluated but remain unchanged
+    15 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   WorldPalette.vcxproj -> C:\Users\Helen\Desktop\WPPlugin\WorldPalette\\WorldPalette.mll
