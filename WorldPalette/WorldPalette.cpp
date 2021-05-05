@@ -537,7 +537,7 @@ void WorldPalette::resizeDistribution(float dx, float dz) {
     }
     else {
         // we add objects
-        if (currentlySelectedRegion.selectedRegion.width < resizeStartRadius) {
+        if (currentlySelectedRegion.selectedRegion.width <= resizeStartRadius) {
             // bring back geometry that used to be there
             std::string com = ","; // comma
             std::vector<std::pair<CATEGORY, vec3>> tmpGeoms;
@@ -599,7 +599,9 @@ void WorldPalette::resizeDistribution(float dx, float dz) {
 }
 
 void WorldPalette::resizeDistributionUndo() {
-
+    float dx = resizeStartRadius - currentlySelectedRegion.selectedRegion.width;
+    printFloat("change in radius", dx);
+    resizeDistribution(dx, 0);
 }
 
 void WorldPalette::brushDistributionUndo() {
@@ -1052,13 +1054,12 @@ void WorldPalette::loadPalette() {
         // set the region's objs
         tmpRegion.objects = objs;
         // set the region's type
-        tmpRegion.selectionType = static_cast<SelectionType>(type);
+        tmpRegion.selectionType = SelectionType::RADIAL;
         // make a new distribution and give it the selection region and radius
         Distribution tmpDist(tmpRegion, radius);
         // save it in the correct spot in the palette
         palette[currentPaletteIndex] = tmpDist;
     }
-    currentlySelectedRegion = palette[0];
 }
 
 void WorldPalette::clearPalette() {

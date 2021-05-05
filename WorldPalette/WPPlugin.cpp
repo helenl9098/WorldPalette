@@ -727,7 +727,7 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	}
 
 	if (undoResize) {
-		// TO DO: Implement this!
+		worldPalette.resizeDistributionUndo();
 		// Map selection region to terrain if there is one
 		if (worldPalette.currentlySelectedRegion.selectedRegion.selectionType != SelectionType::NONE && worldPalette.terrain.isInitialized) {
 			WorldPalette::terrain.updateSelectionRegion();
