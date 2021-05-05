@@ -599,6 +599,31 @@ global proc updatePalette()
     }
 }
 
+global proc updatePaletteFromFile(int $index)
+{
+    global string $palette[];
+    global int $paletteOccupancy[];
+    global int $numSlots;
+    global int $currentSlot;
+    global int $freeIdx;
+    // Set the palette images accordingly
+    // Free slot = default image (sphere.png) for now; Occupied = top view img
+
+    // updating occupancy and next free slot
+    for ($x = 0; $x < $numSlots; $x++) {
+
+    	if ($x < $index) {
+    		$paletteOccupancy[$x] = 1;
+    	} 
+    	else {
+    		$paletteOccupancy[$x] = 0;
+    	}
+    }
+    $freeIdx = $index;
+
+    updatePalette();
+}
+
 global proc loadPalette()
 {
     global string $palette[];
@@ -610,11 +635,15 @@ global proc loadPalette()
     // TO DO: Import palette
     // We first want to clear our palette - however this should happen ONLY IF the user was able to import a palette successfully
     // You can call the clearPalette() function implemented below to clear the palette
+    clearPalette();
+
+    WorldPalette -pl true;
 
     // Once the palette is cleared, you can check out the updatePalette() function above to see how to set palette slot icons to corresponding screenshots
     // Remember to update the paletteOccupancy and freeIdx variables as well
     // For palette occupancy, we set entries to either 0 (free slot) or 1 (occupied slot)
     // freeIdx is used to track the next available slot index (we use it for saving distributions)
+    // this is updated on the c++ side by calling the function updatePalettefromfile
 }
 
 global proc savePalette()
@@ -625,6 +654,7 @@ global proc savePalette()
 
     // TO DO: Export palette
     // Nothing to do on the MEL side - handle it on C++
+    WorldPalette -ps true;
 
     // We can show this popup if saving is successful
     confirmDialog -t "Save Palette" -m "Palette is saved successfully." -b "OK" -icn "information";
@@ -660,6 +690,7 @@ global proc clearPalette()
     $currentSlot = -1;
 
     // TO DO: Call C++ code to reset things on C++ side
+    WorldPalette -pc true;
 }
 
 global proc loadDefaultScene()

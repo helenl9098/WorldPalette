@@ -940,7 +940,15 @@ bool copyFile(const char* SRC, const char* DEST)
 {
     std::ifstream src(SRC, std::ios::binary);
     std::ofstream dest(DEST, std::ios::binary);
+    if (src) {
+        printString("Copying Image From:", SRC);
+    }
+    if (dest) {
+        printString("Copying Image To:", DEST);
+    }
     dest << src.rdbuf();
+    src.close();
+    dest.close();
     return src && dest;
 }
 
@@ -950,10 +958,10 @@ void WorldPalette::savePalette() {
     MGlobal::executeCommand("workspace -q -fullName", path);
     printString("Workspace Path: ", path);
 
-    MString folderPath = path + "/WorldPalette/palettes/";
+    MString folderPath = path + "/WorldPalette/palettes";
     MGlobal::executeCommand("sysFile -makeDir \"" + folderPath + "\"");
 
-    MString tmp = folderPath + "palettes.txt";
+    MString tmp = folderPath + "/palettes.txt";
     const char* txtfilePath = tmp.asChar();
     std::ofstream file(txtfilePath); //open in constructor
 
@@ -963,7 +971,8 @@ void WorldPalette::savePalette() {
             if (!palette[i].empty) {
                 // copy image
                 MString src = path + "/WorldPalette/images/palette" + std::to_string(i).c_str() + ".png";
-                copyFile(src.asChar(), folderPath.asChar());
+                MString dest = path + "/WorldPalette/palettes/palette" + std::to_string(i).c_str() + ".png";
+                copyFile(src.asChar(), dest.asChar());
 
                 SelectedRegion& current = this->palette[i].selectedRegion;
                 file << "Palette " << i << endl;
@@ -988,6 +997,7 @@ void WorldPalette::savePalette() {
             }
         }
     }
+    file.close();
 }
 
 void WorldPalette::loadPalette() {
@@ -1004,12 +1014,18 @@ void WorldPalette::loadPalette() {
         printString("", "Successfully opened file");
     }
     std::string line;
-    
+
+    int numPaletteFilled = 0;
     while (std::getline(file, line)) {
         // parse arguments
         printString(MString("Loading "), line.c_str());
         line.erase(0, 8);
         int currentPaletteIndex = std::stof(line);
+        // copy image
+        MString src = path + "/WorldPalette/images/palette" + std::to_string(currentPaletteIndex).c_str() + ".png";
+        MString dest = path + "/WorldPalette/palettes/palette" + std::to_string(currentPaletteIndex).c_str() + ".png";
+        copyFile(dest.asChar(), src.asChar());
+        numPaletteFilled++;
 
         std::getline(file, line);
         int objsSize = std::stof(line);
@@ -1074,6 +1090,8 @@ void WorldPalette::loadPalette() {
         // save it in the correct spot in the palette
         palette[currentPaletteIndex] = tmpDist;
     }
+    MGlobal::executeCommand(("updatePaletteFromFile(" + std::to_string(numPaletteFilled) + ")").c_str());
+    file.close();
 }
 
 void WorldPalette::clearPalette() {

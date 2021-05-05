@@ -58,6 +58,9 @@ public:
 						bool& undoPaste,
 						bool& undoBrush,
 						bool& undoClear,
-						bool& undoErase);
+						bool& undoErase, 
+						bool& paletteSave,
+						bool& paletteLoad,
+						bool& paletteClear);
 };
 #endif

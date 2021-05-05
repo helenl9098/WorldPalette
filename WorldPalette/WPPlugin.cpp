@@ -105,6 +105,14 @@
 #define kEraseUndoFlag "-uer"
 #define kEraseUndoFlagLong "-undoErase"
 
+// Palette flags
+#define kPaletteSaveFlag "-ps"
+#define kPaletteSaveFlagLong "-paletteSave"
+#define kPaletteLoadFlag "-pl"
+#define kPaletteLoadFlagLong "-paletteLoad"
+#define kPaletteClearFlag "-pc"
+#define kPaletteClearFlagLong "-paletteClear"
+
 // define EXPORT for exporting dll functions
 #define EXPORT _declspec(dllexport)
 // Maya Plugin creator function
@@ -168,6 +176,10 @@ MSyntax WPPlugin::newSyntax()
 	syntax.addFlag(kClearUndoFlag, kClearUndoFlagLong, MSyntax::kBoolean);
 	syntax.addFlag(kEraseUndoFlag, kEraseUndoFlagLong, MSyntax::kBoolean);
 
+	syntax.addFlag(kPaletteSaveFlag, kPaletteSaveFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kPaletteLoadFlag, kPaletteLoadFlagLong, MSyntax::kBoolean);
+	syntax.addFlag(kPaletteClearFlag, kPaletteClearFlagLong, MSyntax::kBoolean);
+
 	return syntax;
 }
 
@@ -209,7 +221,10 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 							  bool& undoPaste,
 							  bool& undoBrush,
 							  bool& undoClear,
-							  bool& undoErase)
+							  bool& undoErase, 
+							  bool& paletteSave,
+							  bool& paletteLoad, 
+	                          bool& paletteClear)
 {
 	MStatus stat = MS::kSuccess;
 	MArgDatabase parser(newSyntax(), argList, &stat);
@@ -527,6 +542,25 @@ MStatus WPPlugin::parseSyntax(const MArgList& argList,
 	else if (parser.isFlagSet(kClearUndoFlagLong)) {
 		stat = parser.getFlagArgument(kClearUndoFlagLong, 0, undoClear);
 	}
+
+	if (parser.isFlagSet(kPaletteSaveFlag)) {
+		stat = parser.getFlagArgument(kPaletteSaveFlag, 0, paletteSave);
+	}
+	else if (parser.isFlagSet(kPaletteSaveFlagLong)) {
+		stat = parser.getFlagArgument(kPaletteSaveFlagLong, 0, paletteSave);
+	}
+	if (parser.isFlagSet(kPaletteLoadFlag)) {
+		stat = parser.getFlagArgument(kPaletteLoadFlag, 0, paletteLoad);
+	}
+	else if (parser.isFlagSet(kPaletteLoadFlagLong)) {
+		stat = parser.getFlagArgument(kPaletteLoadFlagLong, 0, paletteLoad);
+	}
+	if (parser.isFlagSet(kPaletteClearFlag)) {
+		stat = parser.getFlagArgument(kPaletteClearFlag, 0, paletteClear);
+	}
+	else if (parser.isFlagSet(kPaletteClearFlagLong)) {
+		stat = parser.getFlagArgument(kPaletteClearFlagLong, 0, paletteClear);
+	}
 	return stat;
 }
 
@@ -596,13 +630,18 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 	bool undoClear = false;
 	bool undoErase = false;
 
+	// palette stuff
+	bool paletteSave = false; 
+	bool paletteLoad = false;
+	bool paletteClear = false;
+
 	// Parse all the arguments
 	parseSyntax(argList, name, seltype, width, height, center, minBound, maxBound, 
 				paletteIdx, priOrder, isGenerating, 
 				treeOBJ, shrubOBJ, rockOBJ, grassOBJ, isSelRegionMoving,
 				terrainName, uninitializeTerrain, terrainWidth, terrainHeight, terrainSubWidth, terrainSubHeight, geomToMove, 
 				startMove, dpos, startResize, dsize, saveBrush, brushPos, releaseBrush, brushWidth, releaseEraser, clearSelection,
-				undoMove, undoResize, undoPaste, undoBrush, undoClear, undoErase);
+				undoMove, undoResize, undoPaste, undoBrush, undoClear, undoErase, paletteSave, paletteLoad, paletteClear);
 
 	/*
 	* Step 2: Call needed WorldPalette operations
@@ -708,8 +747,6 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Check if user wants to clear selection region
 	if (clearSelection) {
-		worldPalette.loadPalette();
-
 		// First update the selection region
 		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 		// Then clear the region
@@ -772,6 +809,21 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 			// Delete existing geometry in the region and paste new geometry
 			worldPalette.pasteDistribution(seltype, width, height, minBound, maxBound, center, paletteIdx);
 		}
+	}
+	if (paletteSave) {
+		printString("Saving Palette", "");
+		worldPalette.savePalette();
+		return status;
+	}
+	if (paletteLoad) {
+		printString("Loading Palette", "");
+		worldPalette.loadPalette();
+		return status;
+	}
+	if (paletteClear) {
+		printString("Clearing Palette", "");
+		worldPalette.clearPalette();
+		return status;
 	}
 
 	// checking arguments
