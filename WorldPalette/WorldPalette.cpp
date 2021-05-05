@@ -2,19 +2,19 @@
 #include <algorithm>
 #include "vec.h"
 #include <maya/MItSelectionList.h>
+#include <sstream>
 
 std::vector<CATEGORY> WorldPalette::priorityOrder = { CATEGORY::TREE, CATEGORY::SHRUB, CATEGORY::ROCK,CATEGORY::GRASS }; // default order
 Terrain WorldPalette::terrain = Terrain(); // default initialization
 std::vector<MString> WorldPalette::objNames = { "grass:Grass", "rock:Rock", "shrub:Shrub", "tree:Tree" };
 std::vector<vec3> WorldPalette::brushStrokes; // initially an empty list
 
-WorldPalette::WorldPalette() {
+WorldPalette::WorldPalette() : pasteUndo(false), brushUndo(false), eraseUndo(false), 
+                                clearUndo(false), resizeUndo(false), resizeStartRadius(0) {
 	printString(MString("Created World Palette Object"), MString(""));
-    this->pasteUndo = false;
-    this->brushUndo = false;
-    this->eraseUndo = false;
-    this->clearUndo = false;
-    this->resizeUndo = false;
+    for (int i = 0; i < maxPaletteSize; i++) {
+        palette[i].empty = true;
+    }
 }
 
 void WorldPalette::findSceneObjects(std::vector<SceneObject>& objsFound, 
@@ -930,6 +930,141 @@ void WorldPalette::brushDistribution(float brushWidth) {
         findSelectedObject(this->brushAddedObjects);
     }
 
+}
+
+void WorldPalette::savePalette() {
+    // create a folder and file to save the results to
+    MString path;
+    MGlobal::executeCommand("workspace -q -fullName", path);
+    printString("Workspace Path: ", path);
+
+    MString folderPath = path + "/WorldPalette/palettes";
+    MGlobal::executeCommand("sysFile -makeDir \"" + folderPath + "\"");
+
+    MString tmp = folderPath + "/palettes.txt";
+    const char* txtfilePath = tmp.asChar();
+    std::ofstream file(txtfilePath); //open in constructor
+
+    if (file.is_open())
+    {
+        for (int i = 0; i < maxPaletteSize; i++) {
+            if (!palette[i].empty) {
+                SelectedRegion& current = this->palette[i].selectedRegion;
+                file << "Palette " << i << endl;
+
+                file << current.objects.size() << endl;
+                file << std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(current.selectionType)) << endl;
+                file << current.width << endl;
+                file << current.height << endl;
+                file << current.minBounds << endl;
+                file << current.maxBounds << endl;
+                file << current.radius << endl;
+                file << current.position << endl;
+
+                // push back objects
+                for (SceneObject& o : current.objects) {
+                    file << o.name.asChar() << endl;
+                    file << std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(o.layer)) << endl;
+                    file << std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(o.category)) << endl;
+                    file << std::to_string(static_cast<std::underlying_type<CATEGORY>::type>(o.datatype)) << endl;
+                    file << o.position << endl;
+                }
+            }
+        }
+    }
+}
+
+void WorldPalette::loadPalette() {
+    printString(MString("Loading Palette from File"), MString(""));
+    clearPalette();
+
+    MString path;
+    MGlobal::executeCommand("workspace -q -fullName", path);
+    MString folderPath = path + "/WorldPalette/palettes/palettes.txt";
+
+    printString("Loading Palette From: ", folderPath);
+    std::ifstream file(folderPath.asChar());
+    if (file.is_open()) {
+        printString("", "Successfully opened file");
+    }
+    std::string line;
+    
+    while (std::getline(file, line)) {
+        // parse arguments
+        printString(MString("Loading "), line.c_str());
+        line.erase(0, 8);
+        int currentPaletteIndex = std::stof(line);
+
+        std::getline(file, line);
+        int objsSize = std::stof(line);
+
+        std::getline(file, line);
+        int type = std::stof(line);
+
+        std::getline(file, line);
+        float width = std::stof(line);
+
+        std::getline(file, line);
+        float height = std::stof(line);
+
+        std::getline(file, line);
+        std::istringstream iss1(line);
+        vec3 minBounds;
+        iss1 >> minBounds[0] >> minBounds[1] >> minBounds[2];
+
+        std::getline(file, line);
+        std::istringstream iss2(line);
+        vec3 maxBounds;
+        iss2 >> maxBounds[0] >> maxBounds[1] >> maxBounds[2];
+
+        std::getline(file, line);
+        float radius = std::stof(line);
+
+        std::getline(file, line);
+        std::istringstream iss3(line);
+        vec3 pos;
+        iss3 >> pos[0] >> pos[1] >> pos[2];
+
+        std::vector<SceneObject> objs;
+        for (int i = 0; i < objsSize; i++) {
+            std::getline(file, line);
+            string name = line;
+
+            std::getline(file, line);
+            int layer = std::stof(line);
+           
+            std::getline(file, line);
+            int category = std::stof(line);
+            
+            std::getline(file, line);
+            int datatype = std::stof(line);
+
+            std::getline(file, line);
+            std::istringstream iss4(line);
+            vec3 objPosition;
+            iss4 >> objPosition[0] >> objPosition[1] >> objPosition[2];
+
+            SceneObject tmp(static_cast<LAYER>(layer), static_cast<CATEGORY>(category), static_cast<DATATYPE>(datatype), objPosition, MString(name.c_str()));
+            objs.push_back(tmp);
+        }
+        // make selection region
+        SelectedRegion tmpRegion(SelectionType::NONE, width, height, minBounds, maxBounds, pos);
+        // set the region's objs
+        tmpRegion.objects = objs;
+        // set the region's type
+        tmpRegion.selectionType = static_cast<SelectionType>(type);
+        // make a new distribution and give it the selection region and radius
+        Distribution tmpDist(tmpRegion, radius);
+        // save it in the correct spot in the palette
+        palette[currentPaletteIndex] = tmpDist;
+    }
+    currentlySelectedRegion = palette[0];
+}
+
+void WorldPalette::clearPalette() {
+    for (int i = 0; i < maxPaletteSize; i++) {
+        deleteDistribution(i);
+    }
 }
 
 void WorldPalette::updatePriorityOrder(std::vector<int>& newOrder) {

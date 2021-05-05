@@ -14,9 +14,9 @@
 #include <maya/MString.h>
 #include <string>  
 
-enum class LAYER { VEGETATION, SETTLEMENT }; // unused right now... unclear if we will be doing layer stuff
+enum class LAYER { VEGETATION = 0, SETTLEMENT = 1}; // unused right now... unclear if we will be doing layer stuff
 enum class CATEGORY { GRASS = 0, ROCK = 1, SHRUB = 2, TREE = 3}; // can add more later
-enum class DATATYPE { DISTRIBUTION, GRAPH, EXTERNAL }; // this is all the possibilities!
+enum class DATATYPE { DISTRIBUTION = 0, GRAPH = 1, EXTERNAL = 2}; // this is all the possibilities!
 
 DATATYPE getType(CATEGORY c);
 LAYER getLayer(CATEGORY c);
@@ -32,9 +32,9 @@ struct SceneObject {
 };
 
 enum class SelectionType {
-	NONE,
-	PLANAR,
-	RADIAL,
+	NONE = 0,
+	PLANAR = 1,
+	RADIAL = 2,
 };
 
 class SelectedRegion

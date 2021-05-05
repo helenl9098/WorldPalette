@@ -708,6 +708,8 @@ MStatus WPPlugin::doIt(const MArgList& argList)
 
 	// Check if user wants to clear selection region
 	if (clearSelection) {
+		worldPalette.loadPalette();
+
 		// First update the selection region
 		worldPalette.setCurrentDistribution(seltype, width, height, minBound, maxBound, center);
 		// Then clear the region

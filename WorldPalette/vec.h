@@ -174,7 +174,8 @@ const vec3 vec3Zero(0.0f, 0.0f, 0.0f);
 
 inline ostream& operator << (ostream& ostrm, const vec3& v)
 {
-   ostrm << "(" << v[0] << ", " << v[1] << ", " << v[2] << ") ";
+   //ostrm << "(" << v[0] << ", " << v[1] << ", " << v[2] << ") ";
+	ostrm << v[0] << " " << v[1] << " " << v[2];
    return ostrm;
 }
 

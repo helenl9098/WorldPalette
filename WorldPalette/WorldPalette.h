@@ -5,6 +5,9 @@
 #include "Terrain.h"
 #include <maya/MGlobal.h>
 #include "helper.h"
+#include <iostream>
+#include <fstream>  
+
 /*
 *
 * This class will hold all of our saved distributions. It will also know our currently selected distribution. 
@@ -72,7 +75,10 @@ public:
 	void resizeDistribution(float dx, float dz); 
 	void resizeDistributionSave(float width);
 	void resizeDistributionUndo();
-
+	
+	void savePalette();
+	void loadPalette();
+	void clearPalette();
 	void updatePriorityOrder(std::vector<int> &newOrder); // assumes newOrder.size == priorityOrder.size
 
 	// Static variables
