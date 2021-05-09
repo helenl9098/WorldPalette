@@ -1,12 +1,9 @@
 # WorldPalette
 
+<img src="renders/r1.jpg" alt="Example scene 1" width=400> <img src="renders/r2.jpg" alt="Example scene 2" width=400>
 
+<img src="renders/final_5.jpg" alt="Example scene 3" width=470> <img src="renders/final_6.jpg" alt="Example scene 3 top" width=305>
 
-![](renders/r1.jpg)
-
-![](renders/r2.jpg)
-
-![](renders/final_5.jpg)
 
 **University of Pennsylvania, CIS 660: Advanced Topics in Computer Graphics**
 
@@ -36,7 +33,8 @@ World Palette is based on the 2015 SIGGRAPH paper, _WorldBrush: Interactive Exam
 As previously mentioned, World Palette is a Maya Plugin, and we used C++ to implement the distribution synthesis/generation algorithms and MEL to display the user interface, visual 3D indications, and scene geometry of the world. A detailed list of our features is found below.
 
 ## Features
-![](images/gui.png)
+
+<img src="images/gui.png" alt="GUI" width=400>
 
 ### **Maya GUI**
   * Added to the top Maya options bar when plugin is loaded
@@ -58,6 +56,7 @@ As previously mentioned, World Palette is a Maya Plugin, and we used C++ to impl
   * Buttons to add and load custom terrains or scene objects for a category
   * Brings up file selection window
   * All our buttons have appropriate icons and are organized in collapsable groups, allowing the GUI or parts of the GUI to be hidden, expanded, or resized.
+
 ### **Selecting, Saving, & Generating Geometry**
   * Selecting
       * Users can select a region and either save it to the palette or directly select an editing operation, and our program will automatically find the objects in the selection along with their category, layer, and datatype.
@@ -68,6 +67,11 @@ As previously mentioned, World Palette is a Maya Plugin, and we used C++ to impl
       * Scene geometry is generated consistent with the original selected region’s distribution using the Metropolis-Hastings Sampling algorithm. This accounts for all categories in the priority order.
       * Our program automatically outputs the resultant scene geometry into Maya, taking into account terrain height and surface normals
 ### **Editing Operations**
+
+Paste | Move | Brush
+:---: | :---: | :---: 
+<img src="gifs/paste_demo.gif" alt="Paste" width=300> | <img src="gifs/move_demo.gif" alt="Move" width=300> | <img src="gifs/brush_demo.gif" alt="Brush" width=300>
+
   * Paste & Undo Paste
     * Clears everything currently in the selected region and generates new geometry based on the selected palette distribution
     * Undo: clears all newly generated geometry and brings back any geometry deleted by the paste operation
