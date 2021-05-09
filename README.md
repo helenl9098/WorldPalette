@@ -68,9 +68,13 @@ As previously mentioned, World Palette is a Maya Plugin, and we used C++ to impl
       * Our program automatically outputs the resultant scene geometry into Maya, taking into account terrain height and surface normals
 ### **Editing Operations**
 
-Paste | Move | Brush
-:---: | :---: | :---: 
-<img src="gifs/paste_demo.gif" alt="Paste" width=300> | <img src="gifs/move_demo.gif" alt="Move" width=300> | <img src="gifs/brush_demo.gif" alt="Brush" width=300>
+Paste |  Brush
+:---: | :---:
+<img src="gifs/paste_demo.gif" alt="Paste" width=400> | <img src="gifs/brush_demo.gif" alt="Brush" width=400>
+
+Move | Resize
+:---: | :---:
+<img src="gifs/move_demo.gif" alt="Move" width=400> | <img src="gifs/resize_demo.gif" alt="Resize" width=400>
 
   * Paste & Undo Paste
     * Clears everything currently in the selected region and generates new geometry based on the selected palette distribution
