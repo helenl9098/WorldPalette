@@ -19,6 +19,14 @@
 
 [Google Slides](https://docs.google.com/presentation/d/1byS12n9nsRtoRMZ9JiM3sTMzlNBTkkwF3-9QokZnCsk/edit?usp=sharing)
 
+## Running & Building Plugin
+
+### Importing Maya Plugin
+To use the plugin in Maya, simply open up Maya's plugin manager and import the WorldPalette.mll file. If successful, an extra option called WorldPalette will be added to the top bar in Maya. Expand that option to open up the plugin's GUI.
+
+### Building Maya Plugin
+To build the plugin, open up the solution in visual studios. Make sure the project properties has the correct Maya library path so the project can find the maya libraries to import and compile. Then, run the program and it will generate a new .mll file on the top level, which you can then import into Maya.
+
 ## Introduction
 
   Procedural methods for generating virtual worlds traditionally pose many challenges for artists and non-experts such as being too unintuitive and reliant on input parameters. Inverse procedural methods combat this by asking the user for examples of expected outputs to infer the inputs, thus making it easier for artists to generate the desired look. Our authoring tool, World Palette, is an inverse procedural tool that takes in selected regions to generate models on the virtual world, and we developed World Palette as a Maya Plugin. The tool expects the user to select regions with 3D meshes, and these selections along with a specified priority order will be the inputs to the program. Our tool will then allow users to save their selection in a slot on a “palette”. Next, the user will pick a saved selection as well as an editing tool such as copy & paste, move, or brush to output meshes onto the virtual world. These editing operations will allow artists to refine the virtual world to their liking while keeping the consistency of the object distribution and avoiding the tedious work of placing individual geometry. Our tool will be geared towards artists in the game and film industry, and we expect basic knowledge of editing or drawing operations. Familiarity with Maya will be beneficial, but actual modeling experience will not be necessary. 
