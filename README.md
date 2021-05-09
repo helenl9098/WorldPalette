@@ -17,6 +17,15 @@
 
 [Google Slides](https://docs.google.com/presentation/d/1byS12n9nsRtoRMZ9JiM3sTMzlNBTkkwF3-9QokZnCsk/edit?usp=sharing)
 
+## Table of Contents  
+[Introduction](#introduction)  
+[Running & Building Plugin](#build)  
+[Features](#features)   
+[Future Work](#future-work)   
+[Resources](#resources)   
+
+<a name="introduction"/> 
+
 ## Introduction
 
   Procedural methods for generating virtual worlds traditionally pose many challenges for artists and non-experts such as being too unintuitive and reliant on input parameters. Inverse procedural methods combat this by asking the user for examples of expected outputs to infer the inputs, thus making it easier for artists to generate the desired look. Our authoring tool, World Palette, is an inverse procedural tool that takes in selected regions to generate models on the virtual world, and we developed World Palette as a Maya Plugin. The tool expects the user to select regions with 3D meshes, and these selections along with a specified priority order will be the inputs to the program. Our tool will then allow users to save their selection in a slot on a “palette”. Next, the user will pick a saved selection as well as an editing tool such as copy & paste, move, or brush to output meshes onto the virtual world. These editing operations will allow artists to refine the virtual world to their liking while keeping the consistency of the object distribution and avoiding the tedious work of placing individual geometry. Our tool will be geared towards artists in the game and film industry, and we expect basic knowledge of editing or drawing operations. Familiarity with Maya will be beneficial, but actual modeling experience will not be necessary. 
@@ -24,6 +33,7 @@
 World Palette is based on the 2015 SIGGRAPH paper, [_WorldBrush: Interactive Example-based Synthesis of Procedural Virtual Worlds_](https://dl.acm.org/doi/10.1145/2766975) by Emilien A. and others. This paper introduces a novel and interactive way of synthesizing virtual worlds from example arrangements and allows users to edit these worlds as if they’re using a paint “brush” and color “palette”. Their algorithm analyzed selected regions (colors on the palette) and generated pairwise histograms that represented the distribution of objects in the region. With these histograms, they were able to generate geometry using the Metropolis-Hastings sampling method. Users can then apply these distributions onto the world using common painting operations like paint brushing, moving, stretching, copy & pasting, and moving.
 
 As previously mentioned, World Palette is a Maya Plugin, and we used C++ to implement the distribution synthesis/generation algorithms and MEL to display the user interface, visual 3D indications, and scene geometry of the world. A detailed list of our features is found below.
+<a name="build"/> 
 
 ## Running & Building Plugin
 
@@ -49,6 +59,8 @@ In order to start off with an example distribution, you can click on the **_Load
 After loading the default scene, you need to create a selection region in order to start sampling distributions and synthesizing new ones. In order to create a selection region, you need to select the **_Radial Selection_** radio button under **Selection/Selection Mode**. This region is not selectable with a mouse click; however, you can adjust its position and width through the corresponding sliders. You can also use the WSAD keys while holding Shift to move the selection region around. If you no longer want to have the selection region, you need to select the **_No Selection_** radio button. **Do NOT delete the selection region by clicking on the corresponding transform item listed in the Outliner!**
 
 Once the user is happy with their resulting world, they can disable the selection region and export the scene file as they like. Before exporting, the user may also assign material to the terrain and other scene objects and place lights in the scene. You can find some example results we were able to create with WorldPalette, rendered with Arnord renderer plugin, in this repository under the **_renders_** folder.
+
+<a name="features"/> 
 
 ## Features
 
@@ -123,3 +135,32 @@ Move | Resize
     * Palette can be saved by pressing a button. This automatically exports the distribution information of every currently filled slot of the palette, overriding the last save. (Thus, only the most recent saved palette will be kept)
     * The last saved palette can be automatically loaded in at any point by pressing load, even when the plugin is imported again into a new project. The preview thumbnails are also saved and loaded.
     * The palette can be cleared at any point. This doesn’t affect the last save.
+ 
+<a name="future-work"/> 
+
+## Future Work
+
+As future work, some improvements we considered include:
+* Visualizing the brush/eraser stroke path so the user can see where the geometry should be generated or even see the geometry as they click and drag
+* User defined categories
+* More than one OBJ mesh assigned for each category, with a user defined probability of choosing between the two when generating objs of that category
+* Built-in terrain deformation so the terrain height is considered and outputted during generation. This will allow us to output rivers, lakes, islands, and hills.
+* Clicking and dragging to move the selection region
+* Advanced scene structures such as roads and river networks
+* Multiple Undos (instead of just the most recent change)
+* Adding randomness to our output (which can be toggled off) so the generating geometry looks more natural
+* Other attributes to consider when analyzing and generating distributions such as rotation/orientation, object surface normals, color, texture, environment attributes (temperature, moisture, etc.) and population density
+* Editing objects only of a certain layer (Example: only moving the vegetation in the currently selected region)
+* Other selection region shapes like a polygon made similar to a lasso tool
+* Other editing operations
+   * Rotating a whole region
+   * Circle of influence/gradient between two distributions
+   * Fill (fills entire region with one category)
+   * Strict copy & paste (everything in the region is kept, as opposed to generating new geometry)
+
+<a name="resources"/> 
+
+## Resources
+
+We started the implementation of our plugin from scratch without using any third party software. Our default environment assets are taken from [Lowpoly Nature Pack](https://www.cgtrader.com/free-3d-models/exterior/landscape/low-poly-trees-grass-and-rocks-lite). Our example custom scene uses [Macedonian Pine Tree](https://www.cgtrader.com/free-3d-models/plant/conifer/conifer-macedonian-pine), [PBR Game-Ready Rock](https://www.cgtrader.com/free-3d-models/scanned/various/rock-pbr-game-ready), [Curry Leaf Tree](https://www.cgtrader.com/free-3d-models/plant/other/xfrogplants-curry-leaf-tree) and [Seamless Grass Terrain Texture](https://www.pinterest.com/pin/851672979503915446/).
+
