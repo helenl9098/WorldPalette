@@ -1,9 +1,10 @@
-# WorldPalette
+# [WorldPalette](https://vimeo.com/manage/videos/543207619)
 
 <img src="renders/r1.jpg" alt="Example scene 1" width=400> <img src="renders/r2.jpg" alt="Example scene 2" width=400>
 
 <img src="renders/final_5.jpg" alt="Example scene 3" width=470> <img src="renders/final_6.jpg" alt="Example scene 3 top" width=305>
 
+![Developer](https://img.shields.io/badge/Developer-Hanyu%20Liu-green.svg) ![Developer](https://img.shields.io/badge/Developer-Gizem%20Dal-green.svg)
 
 **University of Pennsylvania, CIS 660: Advanced Topics in Computer Graphics**
 
@@ -16,27 +17,43 @@
 
 [Google Slides](https://docs.google.com/presentation/d/1byS12n9nsRtoRMZ9JiM3sTMzlNBTkkwF3-9QokZnCsk/edit?usp=sharing)
 
-## Running & Building Plugin
-
-### Importing Maya Plugin
-To use the plugin in Maya, simply open up Maya's plugin manager and import the WorldPalette.mll file. If successful, an extra option called WorldPalette will be added to the top bar in Maya. Expand that option to open up the plugin's GUI.
-
-### Building Maya Plugin
-To build the plugin, open up the solution in visual studios. Make sure the project properties has the correct Maya library path so the project can find the maya libraries to import and compile. Then, run the program and it will generate a new .mll file on the top level, which you can then import into Maya.
-
 ## Introduction
 
   Procedural methods for generating virtual worlds traditionally pose many challenges for artists and non-experts such as being too unintuitive and reliant on input parameters. Inverse procedural methods combat this by asking the user for examples of expected outputs to infer the inputs, thus making it easier for artists to generate the desired look. Our authoring tool, World Palette, is an inverse procedural tool that takes in selected regions to generate models on the virtual world, and we developed World Palette as a Maya Plugin. The tool expects the user to select regions with 3D meshes, and these selections along with a specified priority order will be the inputs to the program. Our tool will then allow users to save their selection in a slot on a “palette”. Next, the user will pick a saved selection as well as an editing tool such as copy & paste, move, or brush to output meshes onto the virtual world. These editing operations will allow artists to refine the virtual world to their liking while keeping the consistency of the object distribution and avoiding the tedious work of placing individual geometry. Our tool will be geared towards artists in the game and film industry, and we expect basic knowledge of editing or drawing operations. Familiarity with Maya will be beneficial, but actual modeling experience will not be necessary. 
   
-World Palette is based on the 2015 SIGGRAPH paper, _WorldBrush: Interactive Example-based Synthesis of Procedural Virtual Worlds_ by Emilien A. and others. This paper introduces a novel and interactive way of synthesizing virtual worlds from example arrangements and allows users to edit these worlds as if they’re using a paint “brush” and color “palette”. Their algorithm analyzed selected regions (colors on the palette) and generated pairwise histograms that represented the distribution of objects in the region. With these histograms, they were able to generate geometry using the Metropolis-Hastings sampling method. Users can then apply these distributions onto the world using common painting operations like paint brushing, moving, stretching, copy & pasting, and moving.
+World Palette is based on the 2015 SIGGRAPH paper, [_WorldBrush: Interactive Example-based Synthesis of Procedural Virtual Worlds_](https://dl.acm.org/doi/10.1145/2766975) by Emilien A. and others. This paper introduces a novel and interactive way of synthesizing virtual worlds from example arrangements and allows users to edit these worlds as if they’re using a paint “brush” and color “palette”. Their algorithm analyzed selected regions (colors on the palette) and generated pairwise histograms that represented the distribution of objects in the region. With these histograms, they were able to generate geometry using the Metropolis-Hastings sampling method. Users can then apply these distributions onto the world using common painting operations like paint brushing, moving, stretching, copy & pasting, and moving.
 
 As previously mentioned, World Palette is a Maya Plugin, and we used C++ to implement the distribution synthesis/generation algorithms and MEL to display the user interface, visual 3D indications, and scene geometry of the world. A detailed list of our features is found below.
 
+## Running & Building Plugin
+
+### Building
+To build the plugin, open up the solution in visual studios. Make sure the project properties has the correct Maya library path so the project can find the maya libraries to import and compile. Then, run the program and it will generate a new .mll file on the top level, which you can then import into Maya. **So far we confirmed that our plugin works with Maya versions 2019 and 2020.** We will be updating our documentation accordingly as our plugin functionality is confirmed for older versions.
+
+### Importing
+In order to use our tool, the user must first make sure to have the following files and folders in the same directory with each other:
+- WorldPalette.mll (the importable Maya plugin file)
+- WorldPalette.mel (the MEL script file)
+- icons (make sure to not remove any file within this folder)
+- scene_objects (make sure to not remove any file within this folder)
+
+To use the plugin, simply open up Maya's plugin manager and import the WorldPalette.mll file. If successful, an extra option called WorldPalette will be added to the top bar in Maya. Expand that option to open up the plugin's GUI. You will also see 4 hidden transform items with names **_tree:Tree_**, **_rock:Rock_**, etc. under the Outliner list on the left. **Do NOT delete these!** These hidden meshes are used for instancing scene geometries while using the plugin.
+
+### Content Creation
+<img align="left" src="images/gui.png" alt="GUI" width=300>
+
+All the available editing tools can be accessed from the WorldPalette GUI window (seen on the left image). A terrain is not necessary to be able to use our plugin, but users can import their custom terrains to the scene if desired. Note that we only support OBJ files and the filename must be in format “terrain*.obj”. We provide some example terrains under scene_objects/terrains for users to import into their scenes. Once a terrain is loaded, you cannot load another terrain before deleting the existing terrain. **In order to delete the existing terrain, you must use the _Delete Terrain_ button under Scene/Customization on the GUI menu rather than the Maya delete shortcut.** Using the shortcut instead could result in unexpected behavior.
+
+In order to start off with an example distribution, you can click on the **_Load Default Scene_** button to generate scene objects. If you have terrain in your scene, the plugin will set the altitude of these scene objects accordingly. We provide default scene meshes for users; however, custom meshes in OBJ format can also be imported through the corresponding **Scene/Customization** menu items. Keep in mind that you need to set the transform name of the custom mesh to tree/rock/shrub/grass (depending on the scene object you’re replacing) through the Maya Attribute Editor and re-export it as OBJ before importing the mesh through WorldPalette. Depending on the custom mesh, you might also need to reset construction history, freeze transformations and move the pivot point of your mesh to be at the bottom of the object rather than the center before exporting.
+
+After loading the default scene, you need to create a selection region in order to start sampling distributions and synthesizing new ones. In order to create a selection region, you need to select the **_Radial Selection_** radio button under **Selection/Selection Mode**. This region is not selectable with a mouse click; however, you can adjust its position and width through the corresponding sliders. You can also use the WSAD keys while holding Shift to move the selection region around. If you no longer want to have the selection region, you need to select the **_No Selection_** radio button. **Do NOT delete the selection region by clicking on the corresponding transform item listed in the Outliner!**
+
+Once the user is happy with their resulting world, they can disable the selection region and export the scene file as they like. Before exporting, the user may also assign material to the terrain and other scene objects and place lights in the scene. You can find some example results we were able to create with WorldPalette, rendered with Arnord renderer plugin, in this repository under the **_renders_** folder.
+
 ## Features
 
-<img src="images/gui.png" alt="GUI" width=400>
-
 ### **Maya GUI**
+
   * Added to the top Maya options bar when plugin is loaded
   * Option to toggle selection region
   * Sliders and key binds for moving the selection region
