@@ -32,7 +32,7 @@
   
 World Palette is based on the 2015 SIGGRAPH paper, [_WorldBrush: Interactive Example-based Synthesis of Procedural Virtual Worlds_](https://dl.acm.org/doi/10.1145/2766975) by Emilien A. and others. This paper introduces a novel and interactive way of synthesizing virtual worlds from example arrangements and allows users to edit these worlds as if they’re using a paint “brush” and color “palette”. Their algorithm analyzed selected regions (colors on the palette) and generated pairwise histograms that represented the distribution of objects in the region. With these histograms, they were able to generate geometry using the Metropolis-Hastings sampling method. Users can then apply these distributions onto the world using common painting operations like paint brushing, moving, stretching, copy & pasting, and moving.
 
-As previously mentioned, World Palette is a Maya Plugin, and we used C++ to implement the distribution synthesis/generation algorithms and MEL to display the user interface, visual 3D indications, and scene geometry of the world. A detailed list of our features is found below.
+As previously mentioned, World Palette is a Maya Plugin, and we used C++ to implement the distribution synthesis/generation algorithms and MEL to display the user interface, visual 3D indications, and scene geometry of the world. A detailed list of our features is found [here](#features).
 <a name="build"/> 
 
 ## Running & Building Plugin
